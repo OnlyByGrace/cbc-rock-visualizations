@@ -11,47 +11,6 @@
             margin: 0px;
             padding: 0px;
         }
-
-        #svg {
-            width: 100%;
-            height: 100vh;
-        }
-
-        circle {
-            fill: #c8c8c8;
-        }
-
-        .filter-1 {
-            fill: #97002e;
-        }
-
-        .filter-2 {
-            fill: #005a40;
-        }
-
-        .filter-text {
-            font-size: 1.2rem;
-            dominant-baseline: middle;
-        }
-
-        .filter {
-            cursor: pointer;
-        }
-
-        .filter.disabled {
-            opacity: .5;
-        }
-
-        .visualization-title {
-            dominant-baseline: hanging;
-            text-anchor: middle;
-        }
-
-        .button {
-            fill: transparent;
-            stroke: black;
-            stroke-width: 1px;
-        }
     </style>
 </head>
 
@@ -60,11 +19,6 @@
 </body>
 <script src="https://d3js.org/d3.v5.min.js"></script>
 <script src="main.js"></script>
-
-<!-- <div style='border: 1px solid black;position: fixed;top: 0px; bottom: 0px;left: 50%;'></div> -->
-
-<svg id="svg">
-</svg>
 
 <script>
     function generateArray(start, end) {
@@ -75,7 +29,7 @@
         return array;
     }
 
-    let invertedVenn = new window.org_christbaptist.CircularVenn("#svg", "New Viz");
+    let invertedVenn = new window.org_christbaptist.CircularVenn("", "New Viz");
     invertedVenn.addBucket({
         Id: 1,
         Name: "Bucket 1",
@@ -113,6 +67,106 @@
             DisplayName: "Test Filter 1",
             ActiveByDefault: true,
             Order: 2,
+            data: [
+                { Id: 101 },
+                { Id: 3 },
+                { Id: 4 },
+                { Id: 5 },
+                { Id: 8 }
+            ]
+        })
+        .render();
+
+    let invertedVenn1 = new window.org_christbaptist.CircularVenn("", "New Viz");
+    invertedVenn1.addBucket({
+        Id: 1,
+        Name: "Bucket 1",
+        Order: 1,
+        Color: '#97002e',
+        data: generateArray(-200, 240)
+    }).addBucket({
+        Id: 2,
+        Name: "Bucket 2",
+        Order: 2,
+        Color: '#005a40',
+        data: generateArray(0, 100).concat(generateArray(120, 150))
+    })
+        .addBucket({
+            Id: 3,
+            Name: "Bucket 3",
+            Order: 3,
+            Color: '#003763',
+            data: generateArray(0, 100).concat(generateArray(220, 380))
+        })
+        .addFilter({
+            Id: 1,
+            DisplayName: "Test Filter",
+            ActiveByDefault: false,
+            Order: 1,
+            CSS: 'fill: yellow',
+            data: [
+                { Id: 100 },
+                { Id: 2 },
+                { Id: 3 },
+                { Id: 4 },
+                { Id: 5 }
+            ]
+        }).addFilter({
+            Id: 2,
+            DisplayName: "Test Filter 1",
+            ActiveByDefault: true,
+            Order: 2,
+            CSS: 'fill: green',
+            data: [
+                { Id: 101 },
+                { Id: 3 },
+                { Id: 4 },
+                { Id: 5 },
+                { Id: 8 }
+            ]
+        })
+        .render();
+
+        let invertedVenn2 = new window.org_christbaptist.CircularVenn("", "New Viz");
+    invertedVenn2.addBucket({
+        Id: 1,
+        Name: "Bucket 1",
+        Order: 1,
+        Color: '#97002e',
+        data: generateArray(-200, 240)
+    }).addBucket({
+        Id: 2,
+        Name: "Bucket 2",
+        Order: 2,
+        Color: '#005a40',
+        data: generateArray(0, 100).concat(generateArray(120, 150))
+    })
+        .addBucket({
+            Id: 3,
+            Name: "Bucket 3",
+            Order: 3,
+            Color: '#003763',
+            data: generateArray(0, 100).concat(generateArray(220, 380))
+        })
+        .addFilter({
+            Id: 1,
+            DisplayName: "Test Filter",
+            ActiveByDefault: false,
+            Order: 1,
+            CSS: 'fill: blue',
+            data: [
+                { Id: 100 },
+                { Id: 2 },
+                { Id: 3 },
+                { Id: 4 },
+                { Id: 5 }
+            ]
+        }).addFilter({
+            Id: 2,
+            DisplayName: "Test Filter 1",
+            ActiveByDefault: true,
+            Order: 2,
+            CSS: 'fill: red',
             data: [
                 { Id: 101 },
                 { Id: 3 },

@@ -35,21 +35,6 @@ let sampleBucket2 = {
     }]
 };
 
-function stubGetBBox(dotChart) {
-    // Don't know why this is needed. getBBox is undefined in karma test,
-    // but not production
-    spyOn(dotChart.svg, 'node').and.returnValue(<any>{
-        getBBox: function () {
-            return {
-                x: 0,
-                y: 0,
-                height: 100,
-                width: 100
-            }
-        }
-    })
-}
-
 describe('Bucket', () => {
     describe('getIntersection', () => {
         it('should return a new bucket that represents intersection of buckets', (done) => {
@@ -79,7 +64,7 @@ describe("DotChart", function () {
     let svg;
 
     beforeEach(() => {
-        svg = document.createElement('svg');
+        svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svg.id = "mysvg";
 
         document.body.append(svg);
@@ -88,6 +73,11 @@ describe("DotChart", function () {
     afterEach(() => {
         // Cleanup
         document.body.removeChild(svg);
+
+        let dynamicSVG = document.querySelector('svg');
+        if (dynamicSVG) document.body.removeChild(dynamicSVG);
+
+        document.querySelectorAll('style').forEach((el) => document.body.removeChild(el));
     });
 
     it("should create", function () {
@@ -107,6 +97,16 @@ describe("DotChart", function () {
 
         expect(() => { new MyDotChart("#mysvg") }).toThrow();
 
+        document.body.append(svg);
+    });
+
+    it('it should create a new SVG if no SVG passed', () => {
+        document.body.removeChild(svg);
+        expect(document.querySelectorAll('svg').length).toBe(0);
+        let dotChart = new MyDotChart();
+
+        expect(document.querySelectorAll('svg').length).toBe(1);
+        expect(dotChart.svgId).toBeTruthy();
         document.body.append(svg);
     });
 
@@ -172,7 +172,6 @@ describe("DotChart", function () {
             ]
         });
 
-        stubGetBBox(dotChart);
         dotChart.render();
 
         expect(dotChart.disabledFilters).toEqual(['1']);
@@ -200,7 +199,6 @@ describe("DotChart", function () {
     describe('toggleFilter', () => {
         it('should add/remove the filter to the list of disabled filters', () => {
             let dotChart = new MyDotChart();
-
             expect(dotChart.disabledFilters).toEqual([]);
 
             dotChart.toggleFilter('1');
@@ -223,13 +221,13 @@ describe("DotChart", function () {
 
             dot.call((dot) => dotChart.attachFilters(dot, 1));
 
-            expect(dot.node().className).toBe('dot filter-1 filter-2');
+            expect(dot.node().className.animVal).toBe('dot filter-1 filter-2');
 
             dotChart.toggleFilter('1');
-            expect(dot.node().className).toBe('dot filter-2');
+            expect(dot.node().className.animVal).toBe('dot filter-2');
 
             dotChart.toggleFilter('1');
-            expect(dot.node().className).toBe('dot filter-2 filter-1');
+            expect(dot.node().className.animVal).toBe('dot filter-2 filter-1');
         })
     })
 
@@ -317,12 +315,18 @@ describe("DotChart", function () {
             // Expect viewbox to be beyond the dots with padding
         });
 
+        it('should add scoped CSS to the document', () => {
+            let dotChart = new MyDotChart();
+
+            expect(document.getElementsByTagName('style').length).toBe(0);
+            dotChart.render();
+            expect(document.getElementsByTagName('style').length).toBe(1);
+        });
+
         it('should render the filter key (if any filters) in the top left corner', () => {
             let dotChart = new MyDotChart("#mysvg");
 
             dotChart.xcenter = 50;
-
-            stubGetBBox(dotChart);
 
             dotChart.svg.append('g')
                 .append('circle').attr('r', 5).attr('cx', 1).attr('cy', 2);
@@ -340,14 +344,12 @@ describe("DotChart", function () {
 
             dotChart.render();
 
-            // The top left of this SVG will be -50 ,-100
-            expect(dotChart.renderFilterKey).toHaveBeenCalledWith(-50, -100);
+            expect(dotChart.renderFilterKey).toHaveBeenCalledWith(-54, -103);
         });
 
         it('should render the title', () => {
             let dotChart = new MyDotChart("#mysvg", "New Vis");
 
-            stubGetBBox(dotChart);
             spyOn(dotChart, 'renderTitle');
 
             dotChart.render();
@@ -359,7 +361,6 @@ describe("DotChart", function () {
 
             dotChart.disabledFilters = ['1','2','3','4'];
 
-            stubGetBBox(dotChart);
             spyOn(dotChart, 'hideFilter');
 
             dotChart.render();
@@ -371,10 +372,36 @@ describe("DotChart", function () {
         it('should add a text object in the top, center of SVG', () => {
             let dotChart = new MyDotChart("#mysvg", "My Chart");
 
-            stubGetBBox(dotChart);
             dotChart.renderTitle();
 
             expect(dotChart.svg.select('text').text()).toBe('My Chart');
+        });
+    });
+
+    describe('renderStyles', () => {
+        it('should set a style for the SVG to be 100% width and 100vh', () => {
+            let dotChart = new MyDotChart("#mysvg");
+
+            dotChart.renderStyles();
+
+            expect(document.querySelector('style').textContent).toContain(dotChart.svgId + " { width: 100%; height: 100vh; }");
+        });
+
+        it('should add styles for each filter', () => {
+            let dotChart = new MyDotChart("#mysvg");
+
+            dotChart.addFilter({
+                Id: "1",
+                DisplayName: "Test",
+                DataViewName: "Test",
+                CSS: "fill: green",
+                ActiveByDefault: false,
+                Order: 1
+            });
+
+            dotChart.renderStyles();
+
+            expect(document.querySelector('style').textContent).toContain(".filter-1 { fill: green }");
         });
     });
 
@@ -392,7 +419,7 @@ describe("DotChart", function () {
 
             dot.call((dot) => dotChart.attachFilters(dot, 1));
 
-            expect(dot.node().className).toBe('dot filter-1 filter-2');
+            expect(dot.node().className.animVal).toBe('dot filter-1 filter-2');
         });
 
         it('should maintain a list of which circle elements that are part of a given filter', () => {

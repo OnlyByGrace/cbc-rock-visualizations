@@ -82,10 +82,10 @@ export class CircularVenn extends DotChart {
 
         // Locate the center of the diagram that the arcs will circle
         // (this really could be anywhere because of the SVG viewbox)
-        let centerCircleBBox = (<HTMLElement>this.svg.select('.center-bucket').node()).getBoundingClientRect();
-        let centerCircleX = centerCircleBBox.left + (centerCircleBBox.width / 2);
+        let centerCircleBBox = (<SVGGraphicsElement>this.svg.select('.center-bucket').node()).getBBox();
+        let centerCircleX = centerCircleBBox.x + (centerCircleBBox.width / 2);
         this.xcenter = centerCircleX;
-        let centerCircleY = centerCircleBBox.top + (centerCircleBBox.height / 2);
+        let centerCircleY = centerCircleBBox.y + (centerCircleBBox.height / 2);
 
         // + 50 is the padding to leave from inner circles
         let arcCircleRadius = (Math.max(centerCircleBBox.width, centerCircleBBox.height) / 2) + 50;
@@ -145,9 +145,11 @@ export class CircularVenn extends DotChart {
             ]
         }
 
+        let svgBBox = (<HTMLElement>this.svg.node()).getBoundingClientRect()
+
         // Setup pack layout
         let packLayout = d3.pack();
-        packLayout.size([(<HTMLElement>this.svg.node()).getBoundingClientRect().height / 2, (<HTMLElement>this.svg.node()).getBoundingClientRect().height / 2])
+        packLayout.size([svgBBox.height / 2, svgBBox.width / 2])
             .padding((d) => {
                 return (<any>d.data).padding;
             });
@@ -185,11 +187,12 @@ export class CircularVenn extends DotChart {
             .attr('r', function (d: any) { return d.r; })
 
         // Center the circle
-        let centerCircleBBox = centerGroup.node().getBoundingClientRect();
-        let svgCenterX = ((<HTMLElement>this.svg.node()).getBoundingClientRect().width / 2) - (centerCircleBBox.left + (centerCircleBBox.width / 2));
-        let svgCenterY = ((<HTMLElement>this.svg.node()).getBoundingClientRect().height / 2) - (centerCircleBBox.top + (centerCircleBBox.height / 2));
+        // let centerCircleBBox = centerGroup.node().getBoundingClientRect();
 
-        centerGroup.attr('style', 'transform: translate(' + svgCenterX + 'px,' + svgCenterY + 'px)');
+        // let svgCenterX = (svgBBox.width / 2) - (centerCircleBBox.left + (centerCircleBBox.width / 2));
+        // let svgCenterY = svgBBox.top + (svgBBox.height / 2) - (centerCircleBBox.top + (centerCircleBBox.height / 2));
+
+        //centerGroup.attr('style', 'transform: translate(' + svgCenterX + 'px,' + svgCenterY + 'px)');
     }
 
     render() {

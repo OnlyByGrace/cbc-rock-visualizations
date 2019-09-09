@@ -1,5 +1,6 @@
 import * as d3 from 'd3';
 import { filter } from 'minimatch';
+import { timeDay } from 'd3';
 
 function parseColor(input) {
     var div = document.createElement('div'), m;
@@ -107,6 +108,7 @@ export abstract class DotChart {
     svg: d3.Selection<d3.BaseType, unknown, HTMLElement, any>;
     xcenter = 0;
     title: string;
+    svgId: string;
 
     // HashMap to lookup the filters for a given entity without looping through all filters
     filtersForEntity: { [dataId: string]: Array<string> } = {};
@@ -120,14 +122,30 @@ export abstract class DotChart {
     }
 
     constructor(svgId?: string, title: string = "") {
-        if (!svgId) return;
+        if (!svgId) {
+            let allScriptTags = document.getElementsByTagName('script');
+            let scriptTag = allScriptTags[allScriptTags.length - 1];
 
-        this.svg = d3.select(svgId);
+            let newSVGId = "vz" + Date.now();
+            let newSVGEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            newSVGEl.id = newSVGId.toString();
+
+            scriptTag.parentNode.insertBefore(newSVGEl, scriptTag);
+            this.svgId = "#" + newSVGId;
+        } else {
+            this.svgId = svgId;
+        }
+
+        this.svg = d3.select(this.svgId);
         this.title = title;
 
         if (!this.svg.node()) {
             throw "SVG element does not exist";
         }
+    }
+
+    destroy() {
+        document.removeChild(<any>this.svg.node());
     }
 
     addBucket(bucket: Bucket): DotChart {
@@ -211,12 +229,60 @@ export abstract class DotChart {
     }
 
     /**
+     * renderStyles
+     * 
+     * Adds a scoped stylesheet to the document for this SVG. Allows using more than
+     * one visualization on the same page
+     */
+    renderStyles() {
+        if (!this.svgId) return;
+
+        let svgEl = document.querySelector(this.svgId);
+        let styleTag = document.createElement('style');
+
+        styleTag.textContent = `
+            ${this.svgId} { width: 100%; height: 100vh; }
+
+            ${this.svgId} circle {
+                fill: #c8c8c8;
+            }
+
+            ${this.svgId} .filter-text {
+                font-size: 1.2rem;
+                dominant-baseline: middle;
+            }
+    
+            ${this.svgId} .filter {
+                cursor: pointer;
+            }
+    
+            ${this.svgId} .filter.disabled {
+                opacity: .5;
+            }
+    
+            ${this.svgId} .visualization-title {
+                dominant-baseline: hanging;
+                text-anchor: middle;
+            }
+
+        `;
+
+        styleTag.textContent += this.filters.map((filter) => {
+            return `${this.svgId} .filter-${filter.Id} { ${filter.CSS} }`;
+        }).join(" ");
+
+        svgEl.parentNode.insertBefore(styleTag, svgEl);
+    }
+
+    /**
      * Render
      * 
      * Override with specific chart implmentation, and then call this
      * function to scale the chart and draw the filter key
      */
     render() {
+        this.renderStyles();
+
         // Scale to fit
         let rect = (<SVGGraphicsElement>this.svg.node()).getBBox();
 
@@ -230,8 +296,8 @@ export abstract class DotChart {
         // So the width of the diagram is not it's width; it is the farthest point from the center point * 2
         // xcenter is like CSS transform-origin point. We always want xcenter to be centered on the screen
         let diagramWidth;
-        let leftOffsetFromCenter = Math.max(Math.abs(this.xcenter), Math.abs(newLeft)) - Math.min(Math.abs(this.xcenter), Math.abs(newLeft));
-        let rightOffsetFromCenter = Math.max(Math.abs(this.xcenter), Math.abs(newRight)) - Math.min(Math.abs(this.xcenter), Math.abs(newRight));
+        let leftOffsetFromCenter = Math.max(this.xcenter, newLeft) - Math.min(this.xcenter, newLeft);
+        let rightOffsetFromCenter = Math.max(this.xcenter, newRight) - Math.min(this.xcenter, newRight);
         if (leftOffsetFromCenter > rightOffsetFromCenter) {
             diagramWidth = leftOffsetFromCenter;
         } else {
@@ -252,7 +318,8 @@ export abstract class DotChart {
     }
 
     hideFilter(filterId: string) {
-        (<HTMLElement>d3.select('.filter-'+filterId).node()).parentElement.classList.add('disabled');
+        let filterKeyElement = (<HTMLElement>d3.select('.filter-' + filterId).node());
+        if (filterKeyElement) filterKeyElement.parentElement.classList.add('disabled');
         if (this.elementsForFilter[filterId]) {
             for (let element of this.elementsForFilter[filterId]) {
                 element.classList.remove('filter-' + filterId);
@@ -261,7 +328,8 @@ export abstract class DotChart {
     }
 
     showFilter(filterId: string) {
-        (<HTMLElement>d3.select('.filter-'+filterId).node()).parentElement.classList.remove('disabled');
+        let filterKeyElement = (<HTMLElement>d3.select('.filter-' + filterId).node());
+        if (filterKeyElement) filterKeyElement.parentElement.classList.remove('disabled');
         if (this.elementsForFilter[filterId]) {
             for (let element of this.elementsForFilter[filterId]) {
                 element.classList.add('filter-' + filterId);

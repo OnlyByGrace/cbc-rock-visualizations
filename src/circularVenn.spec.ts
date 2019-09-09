@@ -46,6 +46,13 @@ let sampleBucket3 = {
 };
 
 describe('CircularVenn', () => {
+    afterEach(() => {
+        let dynamicSVG = document.querySelector('svg');
+        if (dynamicSVG) document.body.removeChild(dynamicSVG);
+
+        document.querySelectorAll('style').forEach((el) => document.body.removeChild(el));
+    });
+
     it('should create', () => {
         let circularVenn = new CircularVenn();
 
@@ -189,7 +196,7 @@ describe('CircularVenn', () => {
         let svg;
         let dotChart: CircularVenn;
         beforeEach(() => {
-            svg = document.createElement('svg');
+            svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
             svg.id = "mysvg";
             document.body.append(svg);
             dotChart = new CircularVenn("#mysvg");
