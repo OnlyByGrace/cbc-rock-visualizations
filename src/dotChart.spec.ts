@@ -1,5 +1,6 @@
 import * as d3 from 'd3';
 import { DotChart, Bucket, Filter } from './dotChart';
+import { stringify } from 'querystring';
 
 class MyDotChart extends DotChart {
     constructor(svgId?: string, title: string = "") {
@@ -61,20 +62,20 @@ describe('Bucket', () => {
 });
 
 describe("DotChart", function () {
-    let svg;
+    let container;
 
     beforeEach(() => {
-        svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.id = "mysvg";
+        container = document.createElement("div");
+        container.id = "mychart";
 
-        document.body.append(svg);
+        document.body.append(container);
     });
 
     afterEach(() => {
         // Cleanup
-        document.body.removeChild(svg);
+        document.body.removeChild(container);
 
-        let dynamicSVG = document.querySelector('svg');
+        let dynamicSVG = document.querySelector('div');
         if (dynamicSVG) document.body.removeChild(dynamicSVG);
 
         document.querySelectorAll('style').forEach((el) => document.body.removeChild(el));
@@ -86,28 +87,28 @@ describe("DotChart", function () {
         expect(dotChart).toBeTruthy();
     });
 
-    it('should attach to any passed SVG ID', () => {
-        let dotChart = new MyDotChart("#mysvg");
+    it('should attach to the passed ID', () => {
+        let dotChart = new MyDotChart("mychart");
 
-        expect(dotChart.svg.node()).toBe(<any>svg);
+        expect(dotChart.el).toBe(<any>container);
     });
 
     it('should throw an error if the SVG does not exist', () => {
-        document.body.removeChild(svg);
+        document.body.removeChild(container);
 
-        expect(() => { new MyDotChart("#mysvg") }).toThrow();
+        expect(() => { new MyDotChart("mychart") }).toThrow();
 
-        document.body.append(svg);
+        document.body.append(container);
     });
 
     it('it should create a new SVG if no SVG passed', () => {
-        document.body.removeChild(svg);
+        document.body.removeChild(container);
         expect(document.querySelectorAll('svg').length).toBe(0);
         let dotChart = new MyDotChart();
 
         expect(document.querySelectorAll('svg').length).toBe(1);
-        expect(dotChart.svgId).toBeTruthy();
-        document.body.append(svg);
+        expect(dotChart.svg).toBeTruthy();
+        document.body.append(container);
     });
 
     // it('should toggle filters when you click on the key', () => {
@@ -146,7 +147,8 @@ describe("DotChart", function () {
 
     //     expect(dot.node().className).toBe('dot filter-1 filter-2');
 
-    //     (<HTMLElement>dotChart.svg.select('g.filter').node()).click();
+    //     var evObj = new MouseEvent('click', { 'view': window });
+    //     (<HTMLElement>dotChart.svg.select('g.filter').node()).dispatchEvent(evObj);
 
     //     expect(dot.node().className).toBe('dot filter-2');
 
@@ -154,7 +156,7 @@ describe("DotChart", function () {
     // });
 
     it('should hide disabled filters by default', () => {
-        let dotChart = new MyDotChart("#mysvg");
+        let dotChart = new MyDotChart("mychart");
 
         dotChart.addFilter({
             Id: '1',
@@ -213,7 +215,7 @@ describe("DotChart", function () {
         });
 
         it('it should add/remove the filter class from elements representing filter entities', () => {
-            let dotChart = new MyDotChart("#mysvg");
+            let dotChart = new MyDotChart("mychart");
 
             dotChart.filtersForEntity[1] = ['1', '2'];
 
@@ -283,11 +285,11 @@ describe("DotChart", function () {
         });
 
         it('should draw the key', () => {
-            let svgElement = document.createElement('svg');
+            let svgElement = document.createElement('div');
             svgElement.id = "svgChart"
             document.body.append(svgElement);
 
-            let dotChart = new MyDotChart("#svgChart");
+            let dotChart = new MyDotChart("svgChart");
 
             dotChart.addFilter({
                 DisplayName: "Test",
@@ -324,7 +326,7 @@ describe("DotChart", function () {
         });
 
         it('should render the filter key (if any filters) in the top left corner', () => {
-            let dotChart = new MyDotChart("#mysvg");
+            let dotChart = new MyDotChart("mychart");
 
             dotChart.xcenter = 50;
 
@@ -348,7 +350,7 @@ describe("DotChart", function () {
         });
 
         it('should render the title', () => {
-            let dotChart = new MyDotChart("#mysvg", "New Vis");
+            let dotChart = new MyDotChart("mychart", "New Vis");
 
             spyOn(dotChart, 'renderTitle');
 
@@ -357,9 +359,9 @@ describe("DotChart", function () {
         });
 
         it('should call toggleFilter with disabled filters', () => {
-            let dotChart = new MyDotChart("#mysvg", "New Vis");
+            let dotChart = new MyDotChart("mychart", "New Vis");
 
-            dotChart.disabledFilters = ['1','2','3','4'];
+            dotChart.disabledFilters = ['1', '2', '3', '4'];
 
             spyOn(dotChart, 'hideFilter');
 
@@ -370,7 +372,7 @@ describe("DotChart", function () {
 
     describe('renderTitle', () => {
         it('should add a text object in the top, center of SVG', () => {
-            let dotChart = new MyDotChart("#mysvg", "My Chart");
+            let dotChart = new MyDotChart("mychart", "My Chart");
 
             dotChart.renderTitle();
 
@@ -380,15 +382,17 @@ describe("DotChart", function () {
 
     describe('renderStyles', () => {
         it('should set a style for the SVG to be 100% width and 100vh', () => {
-            let dotChart = new MyDotChart("#mysvg");
+            let dotChart = new MyDotChart("mychart");
 
             dotChart.renderStyles();
 
-            expect(document.querySelector('style').textContent).toContain(dotChart.svgId + " { width: 100%; height: 100vh; }");
+            expect(document.querySelector('style').textContent).toContain(`#mychart svg {
+                width: 100%;
+                height: 100vh;`);
         });
 
         it('should add styles for each filter', () => {
-            let dotChart = new MyDotChart("#mysvg");
+            let dotChart = new MyDotChart();
 
             dotChart.addFilter({
                 Id: "1",
@@ -406,32 +410,123 @@ describe("DotChart", function () {
     });
 
     describe('fetchLavaData', () => {
-        // TODO
+        beforeEach(() => {
+            spyOn(window, 'fetch').and.returnValue(new Promise((resolve, reject) => {
+                resolve(<any>{
+                    'json': () => new Promise((resolve, reject) => {
+                        resolve("done");
+                    })
+                })
+            }));
+        });
+
+        it('should call fetch with the lava template if there is one', () => {
+            let dotChart = new MyDotChart();
+
+            dotChart.fetchLavaData(1);
+
+            expect(window.fetch).not.toHaveBeenCalledWith();
+
+            dotChart.setLavaSummary(`Woohoo!`);
+            dotChart.fetchLavaData(1);
+
+            expect(window.fetch).toHaveBeenCalledWith(jasmine.any(String), {
+                credentials: 'include',
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: 'Woohoo!'
+            });
+        });
+
+        it('should fetch a lava template for the given entity', () => {
+            let dotChart = new MyDotChart();
+
+            dotChart.setLavaSummary(`Woohoo!`);
+            dotChart.fetchLavaData(5);
+
+            expect(window.fetch).toHaveBeenCalledWith(jasmine.stringMatching(/\/api\/Lava\/RenderTemplate\?additionalMergeObjects=[0-9]{1,10}\|Row\|5/), jasmine.any(Object));
+        });
+
+        it('should set the entity type for the template to the current entity type', () => {
+            let dotChart = new MyDotChart();
+
+            dotChart.setLavaSummary(`Woohoo!`);
+            dotChart.setEntityType(4509)
+            dotChart.fetchLavaData(5);
+
+            expect(window.fetch).toHaveBeenCalledWith(jasmine.stringMatching(/\/api\/Lava\/RenderTemplate\?additionalMergeObjects=4509\|Row\|[0-9]{1,10}/), jasmine.any(Object));
+        });
+
+        it('should set the merge object name', () => {
+            let dotChart = new MyDotChart();
+
+            dotChart.setLavaSummary(`Woohoo!`);
+            dotChart.setMergeObjectName("MyObj")
+            dotChart.fetchLavaData(5);
+
+            expect(window.fetch).toHaveBeenCalledWith(jasmine.stringMatching(/\/api\/Lava\/RenderTemplate\?additionalMergeObjects=[0-9]{1,10}\|MyObj\|[0-9]{1,10}/), jasmine.any(Object));
+        });
+
+        it('should update the panel with the result', (done) => {
+            let dotChart = new MyDotChart();
+
+            dotChart.setLavaSummary('Woo!')
+
+            dotChart.fetchLavaData(5);
+            
+            setTimeout(() => {
+                expect(dotChart.el.querySelector('.summary-pane').textContent).toBe("done");
+                done();
+            }, 0);
+        });
+
+        // it('should cancel previous calls', () => {
+        //     let dotChart = new MyDotChart("#mysvg");
+
+        //     spyOn(window, 'fetch').and.callFake((url: RequestInfo, params: RequestInit): Promise<Response> => {
+        //         return new Promise((resolve, reject) => {
+        //             resolve(<any>{
+        //                 url: 'url'
+        //             })
+        //         });
+        //     });
+
+        //     dotChart.setLavaSummary(`Woohoo!`);
+        //     dotChart.setMergeObjectName("MyObj")
+        //     dotChart.fetchLavaData(5);
+
+        //     expect(window.fetch).toHaveBeenCalledWith(jasmine.stringMatching(/\/api\/Lava\/RenderTemplate\?additionalMergeObjects=[0-9]{1,10}\|MyObj\|[0-9]{1,10}/), jasmine.any(Object));
+        // });
+
+        // it should prepend filters for this entity in an accessible manner
     })
 
-    describe('attachFilters', () => {
-        it('should attach add the filter classes to the dot', () => {
-            let dotChart = new MyDotChart("#mysvg");
+describe('attachFilters', () => {
+    it('should attach add the filter classes to the dot', () => {
+        let dotChart = new MyDotChart();
 
-            dotChart.filtersForEntity[1] = ['1', '2'];
+        dotChart.filtersForEntity[1] = ['1', '2'];
 
-            let dot = dotChart.svg.append('circle');
+        let dot = dotChart.svg.append('circle');
 
-            dot.call((dot) => dotChart.attachFilters(dot, 1));
+        dot.call((dot) => dotChart.attachFilters(dot, 1));
 
-            expect(dot.node().className.animVal).toBe('dot filter-1 filter-2');
-        });
-
-        it('should maintain a list of which circle elements that are part of a given filter', () => {
-            let dotChart = new MyDotChart("#mysvg");
-
-            dotChart.filtersForEntity[1] = ['1', '2'];
-
-            let dot = dotChart.svg.append('circle');
-
-            dot.call((dot) => dotChart.attachFilters(dot, 1));
-
-            expect(dotChart.elementsForFilter[1]).toEqual([dot.node()]);
-        });
+        expect(dot.node().className.animVal).toBe('dot filter-1 filter-2');
     });
+
+    it('should maintain a list of which circle elements that are part of a given filter', () => {
+        let dotChart = new MyDotChart();
+
+        dotChart.filtersForEntity[1] = ['1', '2'];
+
+        let dot = dotChart.svg.append('circle');
+
+        dot.call((dot) => dotChart.attachFilters(dot, 1));
+
+        expect(dotChart.elementsForFilter[1]).toEqual([dot.node()]);
+    });
+});
 });

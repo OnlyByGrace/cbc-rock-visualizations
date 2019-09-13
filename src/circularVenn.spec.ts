@@ -47,7 +47,7 @@ let sampleBucket3 = {
 
 describe('CircularVenn', () => {
     afterEach(() => {
-        let dynamicSVG = document.querySelector('svg');
+        let dynamicSVG = document.querySelector('div');
         if (dynamicSVG) document.body.removeChild(dynamicSVG);
 
         document.querySelectorAll('style').forEach((el) => document.body.removeChild(el));
@@ -196,15 +196,12 @@ describe('CircularVenn', () => {
         let svg;
         let dotChart: CircularVenn;
         beforeEach(() => {
-            svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            svg.id = "mysvg";
-            document.body.append(svg);
-            dotChart = new CircularVenn("#mysvg");
+            dotChart = new CircularVenn();
         });
 
         afterEach(() => {
             // Cleanup
-            document.body.removeChild(svg);
+            document.body.removeChild(dotChart.el);
         });
 
         it('should draw each bucket as an arc 25px outside the center bucket', () => {
@@ -256,6 +253,10 @@ describe('CircularVenn', () => {
             spyOn(dotChart, 'recalculateBuckets').and.returnValue(null);
             spyOn(dotChart, 'renderBuckets').and.returnValue(null);
         })
+
+        afterEach(() => {
+            // document.removeChild(dotChart.el);
+        });
 
         it('should require at least one bucket', () => {
             expect(() => { dotChart.render() }).toThrow();

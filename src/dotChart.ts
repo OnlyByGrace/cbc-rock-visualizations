@@ -108,7 +108,12 @@ export abstract class DotChart {
     svg: d3.Selection<d3.BaseType, unknown, HTMLElement, any>;
     xcenter = 0;
     title: string;
-    svgId: string;
+    elementId: string;
+    lavaTemplate: string;
+    entityTypeId: number = 15; // Default to Person
+    mergeObjectName: string = 'Row';
+    el: HTMLElement = null;
+    summaryPane: HTMLElement = null;
 
     // HashMap to lookup the filters for a given entity without looping through all filters
     filtersForEntity: { [dataId: string]: Array<string> } = {};
@@ -121,22 +126,31 @@ export abstract class DotChart {
         dotRadius: 10
     }
 
-    constructor(svgId?: string, title: string = "") {
-        if (!svgId) {
+    constructor(attachToId?: string, title: string = "") {
+        if (!attachToId) {
+            this.elementId = "vz" + Date.now();
+            this.el = document.createElement('div');
+            this.el.id = this.elementId;
+
+            // Insert elements for chart into body before currently running script
             let allScriptTags = document.getElementsByTagName('script');
             let scriptTag = allScriptTags[allScriptTags.length - 1];
 
-            let newSVGId = "vz" + Date.now();
-            let newSVGEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            newSVGEl.id = newSVGId.toString();
-
-            scriptTag.parentNode.insertBefore(newSVGEl, scriptTag);
-            this.svgId = "#" + newSVGId;
+            scriptTag.parentNode.insertBefore(this.el, scriptTag);
         } else {
-            this.svgId = svgId;
+            this.el = document.getElementById(attachToId);
+            this.elementId = attachToId;
         }
 
-        this.svg = d3.select(this.svgId);
+        this.summaryPane = document.createElement('div');
+        this.summaryPane.className = "summary-pane";
+        this.el.append(this.summaryPane);
+
+        let newSVGEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        newSVGEl.id = this.elementId.toString() + "-svg";
+
+        this.el.append(newSVGEl);
+        this.svg = d3.select(newSVGEl);
         this.title = title;
 
         if (!this.svg.node()) {
@@ -168,6 +182,69 @@ export abstract class DotChart {
         }
 
         return this;
+    }
+
+    setMergeObjectName(newName: string) {
+        this.mergeObjectName = newName;
+    }
+
+    setEntityType(newEntityTypeId: number) {
+        this.entityTypeId = newEntityTypeId;
+    }
+
+    setLavaSummary(newLavaTemplate: string) {
+        this.lavaTemplate = newLavaTemplate;
+
+        return this;
+    }
+
+    fetchLavaData(entitiyId: number) {
+        // let filtersForLava = '';
+        // if (peopleInDataViews[GroupMember.Id]) {
+        //     filtersForLava = `
+        //         {% assign Filters = '${peopleInDataViews[GroupMember.Id].join(',')}' | Split:',' %}
+        //      `;
+        // }
+
+
+        // summaryPromiseLock += 1;
+        // fetch(`/api/Lava/RenderTemplate?additionalMergeObjects=${groups ? "90|GroupMember" : "15|Row"}|${GroupMember.Id}`, {
+        //     credentials: "include", method: 'POST',
+        //     headers: {
+        //         'Accept': 'application/json',
+        //         'Content-Type': 'application/json'
+        //     },
+        //     body: filtersForLava + summaryLava
+        // })
+        //     .then((rawData) => {
+        //         // Promise lock so that as we're hovering quickly it always shows the latest web call in the popup
+        //         // TODO: Need a way to be sure it actually is the latest webcall -- way to cancel previous callback
+        //         if (summaryPromiseLock > 0)
+        //             summaryPromiseLock -= 1;
+        //         else
+        //             return;
+
+        //         if (summaryPromiseLock == 0) {
+        //             rawData.json().then((parsedLava) => {
+        //                 d3.select('.summary-pane').html(parsedLava);
+        //             })
+        //         }
+        //     })
+        if (this.lavaTemplate) {
+            fetch(`/api/Lava/RenderTemplate?additionalMergeObjects=${this.entityTypeId}|${this.mergeObjectName}|${entitiyId}`, {
+                credentials: "include",
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: this.lavaTemplate
+            }).then((response) => {
+                response.json().then((fulfilledLava) => {
+                    this.summaryPane.textContent = fulfilledLava;
+                })
+            });
+        }
     }
 
     renderFilterKey(x = 0, y = 0) {
@@ -235,40 +312,58 @@ export abstract class DotChart {
      * one visualization on the same page
      */
     renderStyles() {
-        if (!this.svgId) return;
+        if (!this.elementId) return;
 
-        let svgEl = document.querySelector(this.svgId);
+        let svgEl = <HTMLElement>this.svg.node();
         let styleTag = document.createElement('style');
 
         styleTag.textContent = `
-            ${this.svgId} { width: 100%; height: 100vh; }
+            #${this.elementId} svg {
+                width: 100%;
+                height: 100vh;
+                -moz-user-select: none; /* Firefox */
+                -ms-user-select: none; /* Internet Explorer */
+               -khtml-user-select: none; /* KHTML browsers (e.g. Konqueror) */
+              -webkit-user-select: none; /* Chrome, Safari, and Opera */
+              -webkit-touch-callout: none; /* Disable Android and iOS callouts*/ }
 
-            ${this.svgId} circle {
+            #${this.elementId} circle {
                 fill: #c8c8c8;
             }
 
-            ${this.svgId} .filter-text {
+            #${this.elementId} svg .filter-text {
                 font-size: 1.2rem;
                 dominant-baseline: middle;
             }
     
-            ${this.svgId} .filter {
+            #${this.elementId} svg .filter {
                 cursor: pointer;
             }
     
-            ${this.svgId} .filter.disabled {
+            #${this.elementId} svg .filter.disabled {
                 opacity: .5;
             }
     
-            ${this.svgId} .visualization-title {
+            #${this.elementId} svg .visualization-title {
                 dominant-baseline: hanging;
                 text-anchor: middle;
             }
 
+            #${this.elementId} .summary-pane {
+                background-color: white;
+                height: auto;
+                width: 400px;
+                box-shadow: black 0px 0px 5px;
+                margin-left: 2.5%;
+                margin-top: 2.5%;
+                padding: 10px;
+                display: none;
+                position: fixed;
+            }
         `;
 
         styleTag.textContent += this.filters.map((filter) => {
-            return `${this.svgId} .filter-${filter.Id} { ${filter.CSS} }`;
+            return `${this.elementId} .filter-${filter.Id} { ${filter.CSS} }`;
         }).join(" ");
 
         svgEl.parentNode.insertBefore(styleTag, svgEl);
