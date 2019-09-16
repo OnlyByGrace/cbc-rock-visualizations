@@ -19,6 +19,7 @@
 </body>
 <script src="https://d3js.org/d3.v5.min.js"></script>
 <script src="main.js"></script>
+<script src="https://kit.fontawesome.com/6d42517843.js"></script>
 
 <script>
     function generateArray(start, end) {
@@ -83,20 +84,20 @@
         Name: "Bucket 1",
         Order: 1,
         Color: '#97002e',
-        data: generateArray(-200, 240)
+        data: generateArray(-70, 20)
     }).addBucket({
         Id: 2,
         Name: "Bucket 2",
         Order: 2,
         Color: '#005a40',
-        data: generateArray(0, 100).concat(generateArray(120, 150))
+        data: generateArray(20, 30).concat(generateArray(40, 50))
     })
         .addBucket({
             Id: 3,
             Name: "Bucket 3",
             Order: 3,
             Color: '#003763',
-            data: generateArray(0, 100).concat(generateArray(220, 380))
+            data: generateArray(0, 20).concat(generateArray(60, 80))
         })
         .addFilter({
             Id: 1,
@@ -134,12 +135,12 @@
         Order: 1,
         Color: '#97002e',
         data: generateArray(-200, 240)
-    }).addBucket({
-        Id: 2,
-        Name: "Bucket 2",
-        Order: 2,
-        Color: '#005a40',
-        data: generateArray(0, 100).concat(generateArray(120, 150))
+    // }).addBucket({
+    //     Id: 2,
+    //     Name: "Bucket 2",
+    //     Order: 2,
+    //     Color: '#005a40',
+    //     data: generateArray(0, 100).concat(generateArray(120, 150))
     })
         .addBucket({
             Id: 3,

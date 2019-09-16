@@ -1,5 +1,8 @@
-import { Bucket, DotChart } from './dotChart';
+import { DotChart } from './dotChart';
 import * as d3 from 'd3';
+import { Bucket } from './bucket';
+import { BBox } from 'geojson';
+import { EnterElement } from 'd3';
 
 export interface BucketIntersections {
     [intersectingBucketId: string]: Bucket;
@@ -51,6 +54,9 @@ export class CircularVenn extends DotChart {
                     Bucket.getIntersection(bucket1Without2, bucket3ExcludingIntersection12, (intersection13excluding2, bucket1Without23, bucket3Without1OrIntersection12) => {
                         Bucket.getIntersection(bucket2Without1, bucket3Without1OrIntersection12, (intersection23excluding1, bucket2Without13, bucket3without12) => {
                             this.centerBucket = intersection123;
+                            intersection12Excluding3.dynamic = true;
+                            intersection23excluding1.dynamic = true;
+                            intersection13excluding2.dynamic = true;
                             this.buckets = [bucket1Without23, intersection12Excluding3, bucket2Without13, intersection23excluding1, bucket3without12, intersection13excluding2];
                         });
                     });
@@ -195,6 +201,41 @@ export class CircularVenn extends DotChart {
         //centerGroup.attr('style', 'transform: translate(' + svgCenterX + 'px,' + svgCenterY + 'px)');
     }
 
+    /**
+     * renderBucketKey
+     * 
+     * Render a color key at the bottom of teh chart to help identify the buckets
+     */
+    renderBucketKey() {
+        let svgBBox = (<SVGGraphicsElement>this.svg.node()).getBBox();
+
+        let keyY = svgBBox.y + svgBBox.height + 100;
+        let keyX = this.xcenter;
+
+        let bucketKeyGroup = this.svg.append('g').attr('class', 'bucket-key');
+
+        let totalWidth = 0;
+        let currentX = 0;
+
+        let bucketKeyGroupEnter = bucketKeyGroup.selectAll('g').data(this.buckets.filter((bucket) => bucket.dynamic != true)).enter();
+        
+        let bucketKeyItemGroup = bucketKeyGroupEnter.append('g');
+        bucketKeyItemGroup.append('rect').attr('width', '20').attr('height','20').attr('fill', (d) => d.Color);
+        bucketKeyItemGroup.append('text').text((d) => d.Name);
+
+        // Calculate positions of each key item so that they're centered on the screen
+        bucketKeyGroup.selectAll('g').each(function () { totalWidth += (<SVGGraphicsElement>d3.select(this).node()).getBBox().width + 50; })
+
+        currentX = keyX - (totalWidth / 2);
+
+        bucketKeyGroup.selectAll('g').each(function (bucket, index, el) {
+            let thisGroup = d3.select(this);
+            thisGroup.select('rect').attr('x', currentX).attr('y', keyY);
+            thisGroup.select('text').attr('x', currentX + 30).attr('y', keyY + 11).attr('dominant-baseline','middle'); // 11 is midpoint of rect
+            currentX += (<SVGGraphicsElement>thisGroup.node()).getBBox().width + 20;
+        });
+    }
+
     render() {
         if (!this.buckets || !this.buckets.length) {
             throw "No buckets defined";
@@ -203,7 +244,9 @@ export class CircularVenn extends DotChart {
         this.recalculateBuckets();
         this.renderCenterCircle();
         this.renderBuckets();
+        this.renderBucketKey();
 
         super.render();
+
     }
 }

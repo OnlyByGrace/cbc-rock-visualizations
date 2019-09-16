@@ -1,7 +1,7 @@
 var webpack = require('webpack');
 
 var config = {
-    devtool: 'inline-source-map',
+    mode: 'production',
     entry: './src/index.ts',
     resolve: {
       extensions: ['.ts','.js']

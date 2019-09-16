@@ -1,5 +1,5 @@
 import { CircularVenn } from './circularVenn';
-import { Bucket, DotChart } from './dotChart';
+import { DotChart } from './dotChart';
 
 let sampleBucket = {
     Id: 1,
@@ -242,6 +242,17 @@ describe('CircularVenn', () => {
         });
     });
 
+    describe('renderBucketKey', () => {
+        it('should add a new group to the SVG with the buckets', () => {
+            let dotChart = new CircularVenn();
+            dotChart.addBucket(sampleBucket);
+
+            dotChart.renderBucketKey();
+
+            expect(dotChart.svg.select('g.bucket-key').size()).toBe(1);
+        });
+    });
+
     describe('render', () => {
         let dotChart;
 
@@ -252,6 +263,7 @@ describe('CircularVenn', () => {
             spyOn(dotChart, 'renderCenterCircle').and.returnValue(null);
             spyOn(dotChart, 'recalculateBuckets').and.returnValue(null);
             spyOn(dotChart, 'renderBuckets').and.returnValue(null);
+            spyOn(dotChart, 'renderBucketKey').and.returnValue(null);
         })
 
         afterEach(() => {
@@ -289,7 +301,13 @@ describe('CircularVenn', () => {
         // it should overlap the rings if buckets > 2
         // it should draw dots in the appropriate ring
 
-        // it should draw the title
+        it('should draw the bucket key at the bottom', () => {
+            dotChart.addBucket(sampleBucket);
+
+            dotChart.render();
+
+            expect(dotChart.renderBucketKey).toHaveBeenCalled();
+        });
 
         it('should call super render', () => {
             dotChart.addBucket(sampleBucket);

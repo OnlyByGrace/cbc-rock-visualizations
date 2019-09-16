@@ -1,6 +1,8 @@
 import * as d3 from 'd3';
-import { DotChart, Bucket, Filter } from './dotChart';
+import { DotChart } from './dotChart';
 import { stringify } from 'querystring';
+import { Bucket } from './bucket';
+import { Filter } from './filter';
 
 class MyDotChart extends DotChart {
     constructor(svgId?: string, title: string = "") {
@@ -346,7 +348,7 @@ describe("DotChart", function () {
 
             dotChart.render();
 
-            expect(dotChart.renderFilterKey).toHaveBeenCalledWith(-54, -103);
+            expect(dotChart.renderFilterKey).toHaveBeenCalledWith(-449.5, -103);
         });
 
         it('should render the title', () => {
@@ -381,14 +383,15 @@ describe("DotChart", function () {
     });
 
     describe('renderStyles', () => {
-        it('should set a style for the SVG to be 100% width and 100vh', () => {
+        it('should set a style for the div to be 100% width and 100vh', () => {
             let dotChart = new MyDotChart("mychart");
 
             dotChart.renderStyles();
 
-            expect(document.querySelector('style').textContent).toContain(`#mychart svg {
-                width: 100%;
-                height: 100vh;`);
+            expect(document.querySelector('style').textContent).toContain(`#mychart {
+                display: flex;
+                height: 100vh;
+                width: 100%;`);
         });
 
         it('should add styles for each filter', () => {

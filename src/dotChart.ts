@@ -1,106 +1,6 @@
 import * as d3 from 'd3';
-import { filter } from 'minimatch';
-import { timeDay } from 'd3';
-
-function parseColor(input) {
-    var div = document.createElement('div'), m;
-    div.style.color = input;
-    m = div.style.color.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
-    if (m) return [m[1], m[2], m[3]];
-    else return null;
-}
-
-export class Bucket {
-    Id: number;
-    Name: string;
-    Order: number;
-    Color: string;
-    data: Array<any>;
-
-    static getIntersection(bucket1: Bucket, bucket2: Bucket, callback: (intersection: Bucket, bucket1Without2: Bucket, bucket2Without: Bucket) => void) {
-        let newBucket1: Bucket = {
-            Id: bucket1.Id,
-            Name: bucket1.Name,
-            Order: bucket1.Order,
-            Color: bucket1.Color,
-            data: []
-        };
-        let newBucket2: Bucket = {
-            Id: bucket2.Id,
-            Name: bucket2.Name,
-            Order: bucket2.Order,
-            Color: bucket2.Color,
-            data: []
-        };
-
-        let bucket1ParsedColor = parseColor(bucket1.Color);
-        let bucket2ParsedColor = parseColor(bucket2.Color);
-        let newBucketColor;
-
-        if (bucket1ParsedColor && bucket2ParsedColor) {
-            newBucketColor = [
-                (parseInt(bucket1ParsedColor[0]) + parseInt(bucket2ParsedColor[0])) / 2,
-                (parseInt(bucket1ParsedColor[1]) + parseInt(bucket2ParsedColor[1])) / 2,
-                (parseInt(bucket1ParsedColor[2]) + parseInt(bucket2ParsedColor[2])) / 2,
-            ]
-            newBucketColor = `rgb(${newBucketColor[0]},${newBucketColor[1]},${newBucketColor[2]})`;
-        } else {
-            newBucketColor = null;
-        }
-
-        let intersection: Bucket = {
-            Id: null,
-            Name: bucket1.Name + " ∪ " + bucket2.Name,
-            Order: null,
-            Color: newBucketColor,
-            data: []
-        };
-        let index1 = 0;
-        let index2 = 0;
-        while (index1 < bucket1.data.length || index2 < bucket2.data.length) {
-            if (index1 >= bucket1.data.length) {
-                newBucket2.data.push(bucket2.data[index2]);
-                index2++;
-                continue;
-            }
-
-            if (index2 >= bucket2.data.length) {
-                newBucket1.data.push(bucket1.data[index1]);
-                index1++;
-                continue;
-            }
-
-            if (bucket1.data[index1].Id == bucket2.data[index2].Id) {
-                intersection.data.push(bucket1.data[index1]);
-                index1++;
-                index2++;
-            } else if (bucket1.data[index1].Id < bucket2.data[index2].Id) {
-                newBucket1.data.push(bucket1.data[index1]);
-                index1++;
-            } else if (bucket1.data[index1].Id > bucket2.data[index2].Id) {
-                newBucket2.data.push(bucket2.data[index2]);
-                index2++;
-            }
-        }
-
-        callback(intersection, newBucket1, newBucket2);
-
-        return;
-    }
-}
-
-export interface Filter {
-    Id: string;
-    DisplayName: string;
-    DataViewName: string;
-    CSS: string;
-    ActiveByDefault: boolean;
-    Order: number;
-    data?: Array<any>;
-
-    // Dynamic - the number of people in this chart matching this person
-    count?: number;
-}
+import { Filter } from './filter';
+import { Bucket } from './bucket';
 
 export abstract class DotChart {
     buckets: Bucket[] = [];
@@ -142,16 +42,35 @@ export abstract class DotChart {
             this.elementId = attachToId;
         }
 
+        // Add Lava Summary dialog
         this.summaryPane = document.createElement('div');
         this.summaryPane.className = "summary-pane";
         this.el.append(this.summaryPane);
 
+        // Add fulscreen and chart style buttons
+        let fullScreenButton = document.createElement('div');
+        fullScreenButton.className = "full-screen";
+        fullScreenButton.innerHTML = '<div><i class="fa fa-expand"></i></div>';
+        fullScreenButton.onclick = this.goFullscreen.bind(this);
+
+        // let styleSelectorButtons = document.createElement('div');
+        // styleSelectorButtons.className = "style-selector";
+        // styleSelectorButtons.innerHTML = `
+        //     <div class="buckets"><i class="fa fa-chart-bar"></i></div>
+        //     <div class="circles"><i class="far fa-circle"></i></div>
+        // `;
+        
+        this.el.append(fullScreenButton);
+        // this.el.append(styleSelectorButtons);
+
+        // Add chart SVG
         let newSVGEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         newSVGEl.id = this.elementId.toString() + "-svg";
-
         this.el.append(newSVGEl);
         this.svg = d3.select(newSVGEl);
         this.title = title;
+
+        document.addEventListener("fullscreenchange", this.onFullScreen.bind(this));
 
         if (!this.svg.node()) {
             throw "SVG element does not exist";
@@ -162,11 +81,40 @@ export abstract class DotChart {
         document.removeChild(<any>this.svg.node());
     }
 
+    onFullScreen() {
+        if (document.fullscreenElement) {
+            this.el.style.backgroundColor = "#fafafa";
+            let expandElement = this.el.getElementsByClassName('fa-expand')[0];
+            expandElement.classList.remove('fa-expand');
+            expandElement.classList.add('fa-compress');
+        } else {
+            this.el.style.backgroundColor = "initial";
+            let expandElement = this.el.getElementsByClassName('fa-compress')[0];
+            expandElement.classList.remove('fa-compress');
+            expandElement.classList.add('fa-expand');
+        }
+    }
+
+    goFullscreen() {
+        if (!document.fullscreenElement) {
+            this.el.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
     addBucket(bucket: Bucket): DotChart {
         this.buckets.push(bucket);
         return this;
     }
 
+    /**
+     * addFilter
+     * 
+     * Adds the filter to the chart, and indexes all the people in this filter so we can display them when rendered
+     * 
+     * @param filter The filter to add to this chart
+     */
     addFilter(filter: Filter) {
         this.filters.push(filter);
 
@@ -318,9 +266,15 @@ export abstract class DotChart {
         let styleTag = document.createElement('style');
 
         styleTag.textContent = `
+            #${this.elementId} {
+                display: flex;
+                height: 100vh;
+                width: 100%;
+                flex-direction: column;
+            }
+
             #${this.elementId} svg {
                 width: 100%;
-                height: 100vh;
                 -moz-user-select: none; /* Firefox */
                 -ms-user-select: none; /* Internet Explorer */
                -khtml-user-select: none; /* KHTML browsers (e.g. Konqueror) */
@@ -329,6 +283,10 @@ export abstract class DotChart {
 
             #${this.elementId} circle {
                 fill: #c8c8c8;
+            }
+
+            #${this.elementId} .dot:not(.group) {
+                cursor: pointer;
             }
 
             #${this.elementId} svg .filter-text {
@@ -360,10 +318,135 @@ export abstract class DotChart {
                 display: none;
                 position: fixed;
             }
+
+            #${this.elementId}.lds-dual-ring {
+                margin-left: auto;
+                margin-right: auto;
+                display: block;
+                width: 64px;
+                height: 64px;
+              }
+
+              #${this.elementId}.lds-dual-ring:after {
+                content: " ";
+                display: block;
+                width: 46px;
+                height: 46px;
+                margin: 1px;
+                border-radius: 50%;
+                border: 5px solid #fff;
+                border-color: grey transparent grey transparent;
+                animation: lds-dual-ring 1.2s linear infinite;
+              }
+
+              @keyframes lds-dual-ring {
+                0% {
+                  transform: rotate(0deg);
+                }
+                100% {
+                  transform: rotate(360deg);
+                }
+              }
+
+              // Needed?
+              //
+              //
+              //
+        
+            text {
+                font-size: 1em;
+            }
+        
+            .bucket-label,
+            .visualization-title {
+                dominant-baseline: hanging;
+                text-anchor: middle;
+            }
+        
+            .filter {
+                cursor: pointer;
+            }
+        
+            .filter.disabled {
+                opacity: .3;
+            }
+        
+            .filter-text {
+                dominant-baseline: middle;
+                font-size: 1em;
+            }
+        
+            circle {
+                /*stroke: white;*/
+                fill: #b1ceda;
+                /*opacity: 0.3;*/
+                stroke-width: 2px;
+            }
+        
+            .group {
+                fill: antiquewhite
+            }
+        
+            .diagram {
+                transform: translate(0px, 50px);
+            }
+        
+            foreignObject td:first-child {
+                text-align: left;
+            }
+        
+            foreignObject tr:not(:first-child) {
+                height: 2em;
+            }
+        
+            foreignObject tr:nth-child(2n+1) {
+                background-color: #efefef;
+            }
+        
+            .custom-css {
+                display: none;
+            }
+        
+            .labels text {
+                dominant-baseline: middle;
+                text-anchor: start;
+            }
+        
+            .enabledByDefault label {
+                float: left;
+                margin-left: 30px;
+                font-weight: 400;
+            }
+        
+            .bucket-line {
+                stroke-width: 3;
+                stroke: black;
+            }
+        
+            .style-selector, .full-screen {
+                align-self: flex-end;
+                border-radius: 10px;
+                background-color: white;
+                display: flex;
+                margin-right: 100px;
+            }
+        
+            .full-screen {
+                background-color: initial;
+            }
+        
+            .style-selector div, .full-screen div {
+                width: 40px;
+                height: 40px;
+                text-align: center;
+                cursor: pointer;
+                line-height: 40px;
+            }
+        
         `;
 
         styleTag.textContent += this.filters.map((filter) => {
-            return `${this.elementId} .filter-${filter.Id} { ${filter.CSS} }`;
+            return `#${this.elementId} .filter-${filter.Id} { ${filter.CSS} }`;
         }).join(" ");
 
         svgEl.parentNode.insertBefore(styleTag, svgEl);
@@ -399,10 +482,19 @@ export abstract class DotChart {
             diagramWidth = rightOffsetFromCenter;
         }
 
+        let minHeight = (<HTMLElement>this.svg.node()).getBoundingClientRect().height;
+
+        let minWidth = (<HTMLElement>this.svg.node()).getBoundingClientRect().width / 2;
+        diagramWidth = Math.max(diagramWidth, minWidth);
+
+        if (newBottom - newTop < minHeight) {
+            (<HTMLElement>this.svg.node()).style.height = newBottom - newTop + "px";
+        }
+
         this.svg.attr('viewBox', `${this.xcenter - diagramWidth} ${newTop} ${(diagramWidth * 2)} ${newBottom + Math.abs(newTop)}`)
 
         if (this.filters.length) {
-            this.renderFilterKey(diagramWidth == Infinity ? 0 : this.xcenter - diagramWidth, newTop);
+            this.renderFilterKey(diagramWidth == Infinity ? 0 : this.xcenter - diagramWidth + 100, newTop);
         }
 
         if (this.title) {
@@ -413,7 +505,7 @@ export abstract class DotChart {
     }
 
     hideFilter(filterId: string) {
-        let filterKeyElement = (<HTMLElement>d3.select('.filter-' + filterId).node());
+        let filterKeyElement = (<HTMLElement>this.svg.select('.filter-' + filterId).node());
         if (filterKeyElement) filterKeyElement.parentElement.classList.add('disabled');
         if (this.elementsForFilter[filterId]) {
             for (let element of this.elementsForFilter[filterId]) {
@@ -423,7 +515,7 @@ export abstract class DotChart {
     }
 
     showFilter(filterId: string) {
-        let filterKeyElement = (<HTMLElement>d3.select('.filter-' + filterId).node());
+        let filterKeyElement = (<HTMLElement>this.svg.select('.filter-' + filterId).node());
         if (filterKeyElement) filterKeyElement.parentElement.classList.remove('disabled');
         if (this.elementsForFilter[filterId]) {
             for (let element of this.elementsForFilter[filterId]) {
