@@ -1,13 +1,30 @@
-import { DotChart } from './dotChart';
 import * as d3 from 'd3';
 import { Bucket } from './bucket';
-import { BBox } from 'geojson';
-import { EnterElement } from 'd3';
+import { DotChart } from './dotChart';
+import { join } from 'path';
 
 export interface BucketIntersections {
     [intersectingBucketId: string]: Bucket;
 }
 
+export class BucketWrapper {
+    startingDegree: number;
+    endingDegree: number;
+    x: number;
+    y: number;
+    r: number;
+    overlapDegrees: number;
+    children: DotWrapper[];
+
+    data: Bucket;
+}
+
+export interface DotWrapper {
+    data: any;
+    x: number;
+    y: number;
+    r: number;
+}
 /**
  * IntertedVenn Chart
  * 
@@ -31,7 +48,7 @@ export class CircularVenn extends DotChart {
         return <CircularVenn>super.addBucket(bucket);
     }
 
-    recalculateBuckets() {
+    calculateBucketIntersections() {
         if (this.buckets.length == 1) {
             this.centerBucket = {
                 Id: null,
@@ -93,53 +110,106 @@ export class CircularVenn extends DotChart {
         this.xcenter = centerCircleX;
         let centerCircleY = centerCircleBBox.y + (centerCircleBBox.height / 2);
 
+        
         // + 50 is the padding to leave from inner circles
         let arcCircleRadius = (Math.max(centerCircleBBox.width, centerCircleBBox.height) / 2) + 50;
 
-        // Draw the arc and dots
+        // Add another center circle so a hover will show statistics
+        this.svg.select('.center-bucket').append("circle")
+            .data([{ data: this.centerBucket }])
+            .attr('class', 'base')
+            .attr('cx', centerCircleX)
+            .attr('cy', centerCircleY)
+            .attr('r', arcCircleRadius)
+            .style('fill','transparent')
+
+        // let chartGroup = this.svg.append('g');
+        // let chartArcEnter = chartGroup.selectAll('g').data(this.buckets).enter();
+
+        let bucketWrappers = [];
+        // Calculate the arc and dot positions
         for (let i = 0; i < this.buckets.length; i++) {
-            let startingDegree = (degreeRangeOfEachBucket * (i - 1)) + initialDegreeOffset;
-            let endingDegree = degreeRangeOfEachBucket * i + initialDegreeOffset
 
-            this.svg.append('path')
-                .attr('d', () => {
-                    return getArc(centerCircleX, centerCircleY, arcCircleRadius, startingDegree-overlap, endingDegree+overlap);
-                })
-                .attr('style', `fill: none; stroke: ${this.buckets[i].Color}; stroke-width: 25px;`);
+            let bucketWrapper: BucketWrapper = {
+                children: [],
+                data: this.buckets[i],
+                startingDegree: null,
+                endingDegree: null,
+                x: null,
+                y: null,
+                r: null,
+                overlapDegrees: null
+            }
 
+            // Set bucket arc properties
+            bucketWrapper.startingDegree = (degreeRangeOfEachBucket * (i - 1)) + initialDegreeOffset;
+            bucketWrapper.endingDegree = degreeRangeOfEachBucket * i + initialDegreeOffset
+            bucketWrapper.x = centerCircleX;
+            bucketWrapper.y = centerCircleY;
+            bucketWrapper.r = arcCircleRadius;
+            bucketWrapper.overlapDegrees = overlap;
+
+            // Calculate dot positions
             let currentDot = 0;
             let maxDot = this.buckets[i].data.length
             let currentRow = 0;
             let dotGroup;
-
-            if (maxDot > 0) {
-                dotGroup = this.svg.append('g');
-            }
 
             while (currentDot < maxDot) {
                 let padding = 5;
                 let arcLengthBetweenDots = (10 * 2) + 2;
                 let incrementToPlot = (arcLengthBetweenDots / (2 * Math.PI * (arcCircleRadius + (currentRow * 20) + 25))) * 360;
 
-                let currentDegree = startingDegree + padding;
-                while (currentDegree < (endingDegree - padding) && currentDot < maxDot) {
+                let currentDegree = bucketWrapper.startingDegree + padding;
+                while (currentDegree < (bucketWrapper.endingDegree - padding) && currentDot < maxDot) {
                     let radians = currentDegree * (Math.PI / 180);
                     let x = centerCircleX + ((arcCircleRadius + (currentRow * 20) + 25) * Math.cos(radians));
                     let y = centerCircleY + ((arcCircleRadius + (currentRow * 20) + 25) * Math.sin(radians));
-                    dotGroup.append('circle')
-                        .call((d) => { this.attachFilters(d, this.buckets[i].data[currentDot].Id) })
-                        .attr('r', 10)
-                        .attr('cx', x)
-                        .attr('cy', y)
+
+                    // Set dot position
+                    let dotWrapper: DotWrapper = {
+                        data: bucketWrapper.data.data[currentDot],
+                        x: x,
+                        y: y,
+                        r: 10
+                    }
+
+                    bucketWrapper.children.push(dotWrapper);
 
                     currentDot++;
-
                     currentDegree += incrementToPlot;
                 }
 
                 currentRow++;
             }
+
+            bucketWrappers.push(bucketWrapper);
         }
+
+        // Draw the elements
+        let bucketsEnter = this.svg.append('g').attr('class', 'chart-body').selectAll('g').data(bucketWrappers).enter();
+
+        let bucketGroup = bucketsEnter.append('g').attr('class', 'bucket');
+
+        // Draw arc
+        bucketGroup
+            .append('path')
+            .attr('class', 'base')
+            .attr('d', (d) => {
+                return getArc(d['x'], d['y'], d['r'], d['startingDegree'] - d['overlapDegrees'], d['endingDegree'] + d['overlapDegrees']);
+            })
+            .attr('style', (d) => `fill: none; stroke: ${d.data.Color}; stroke-width: 25px;`);
+
+        let dotsEnter = bucketGroup.append('g').attr('class', 'dots').selectAll('circle').data((d) => d.children).enter();
+
+        let that = this;
+        dotsEnter.append('circle')
+            .attr('class', function (d: DotWrapper, i, el) {
+                return that.attachFilters.call(that, this, d)
+            })
+            .attr('r', (d: DotWrapper) => d.r)
+            .attr('cx', (d: DotWrapper) => d.x)
+            .attr('cy', (d: DotWrapper) => d.y)
     }
 
     renderCenterCircle() {
@@ -148,6 +218,9 @@ export class CircularVenn extends DotChart {
             "padding": 2,
             "children": [
                 ...this.centerBucket.data
+            ],
+            "data" : [
+                this.centerBucket.data
             ]
         }
 
@@ -161,12 +234,14 @@ export class CircularVenn extends DotChart {
             });
         packLayout.radius(() => 10);
         var root = d3.hierarchy(baseContainingCircle);//.sum(function (d) { return 5; });
-        packLayout(root);
+        let rootNode = packLayout(root);
 
         // Render circles
         const centerGroup = this.svg.insert("g", ':first-child')
-            .attr("class", 'center-bucket');
+            .attr("class", 'center-bucket bucket');
 
+        var that = this;
+        
         centerGroup.selectAll("circle")
             .data(root.descendants().slice(1))
             .join("circle")
@@ -185,20 +260,12 @@ export class CircularVenn extends DotChart {
             //         return 'dot';
             //     }
             // })
-            .each((d, i, nodes) => {
-                this.attachFilters(d3.select(nodes[i]), (<any>d.data).Id)
+            .attr('class', function (d) {
+                return that.attachFilters.call(that, this, d);
             })
             .attr('cx', function (d: any) { return d.x; })
             .attr('cy', function (d: any) { return d.y; })
             .attr('r', function (d: any) { return d.r; })
-
-        // Center the circle
-        // let centerCircleBBox = centerGroup.node().getBoundingClientRect();
-
-        // let svgCenterX = (svgBBox.width / 2) - (centerCircleBBox.left + (centerCircleBBox.width / 2));
-        // let svgCenterY = svgBBox.top + (svgBBox.height / 2) - (centerCircleBBox.top + (centerCircleBBox.height / 2));
-
-        //centerGroup.attr('style', 'transform: translate(' + svgCenterX + 'px,' + svgCenterY + 'px)');
     }
 
     /**
@@ -218,9 +285,9 @@ export class CircularVenn extends DotChart {
         let currentX = 0;
 
         let bucketKeyGroupEnter = bucketKeyGroup.selectAll('g').data(this.buckets.filter((bucket) => bucket.dynamic != true)).enter();
-        
+
         let bucketKeyItemGroup = bucketKeyGroupEnter.append('g');
-        bucketKeyItemGroup.append('rect').attr('width', '20').attr('height','20').attr('fill', (d) => d.Color);
+        bucketKeyItemGroup.append('rect').attr('width', '20').attr('height', '20').attr('fill', (d) => d.Color);
         bucketKeyItemGroup.append('text').text((d) => d.Name);
 
         // Calculate positions of each key item so that they're centered on the screen
@@ -231,7 +298,7 @@ export class CircularVenn extends DotChart {
         bucketKeyGroup.selectAll('g').each(function (bucket, index, el) {
             let thisGroup = d3.select(this);
             thisGroup.select('rect').attr('x', currentX).attr('y', keyY);
-            thisGroup.select('text').attr('x', currentX + 30).attr('y', keyY + 11).attr('dominant-baseline','middle'); // 11 is midpoint of rect
+            thisGroup.select('text').attr('x', currentX + 30).attr('y', keyY + 11).attr('dominant-baseline', 'middle'); // 11 is midpoint of rect
             currentX += (<SVGGraphicsElement>thisGroup.node()).getBBox().width + 20;
         });
     }
@@ -241,7 +308,7 @@ export class CircularVenn extends DotChart {
             throw "No buckets defined";
         }
 
-        this.recalculateBuckets();
+        this.calculateBucketIntersections();
         this.renderCenterCircle();
         this.renderBuckets();
         this.renderBucketKey();

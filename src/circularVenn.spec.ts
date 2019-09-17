@@ -77,16 +77,16 @@ describe('CircularVenn', () => {
                 let bucket1 = (JSON.parse(JSON.stringify(sampleBucket)));
 
                 dotChart.addBucket(bucket1)
-                    .recalculateBuckets();
+                    .calculateBucketIntersections();
 
-                expect(dotChart.centerBucket.data).toEqual([{
+                expect(dotChart.centerBucket.data).toEqual([jasmine.objectContaining({
                     Id: 1
-                }, {
+                }), jasmine.objectContaining({
                     Id: 3
-                },
-                {
+                }),
+                jasmine.objectContaining({
                     Id: 4
-                }]);
+                })]);
             });
         });
 
@@ -99,27 +99,27 @@ describe('CircularVenn', () => {
 
                 dotChart.addBucket(bucket1)
                     .addBucket(bucket2)
-                    .recalculateBuckets();
+                    .calculateBucketIntersections();
 
                 expect(dotChart.centerBucket).toEqual({
                     Color: null,
                     Id: null,
-                    Name: "Bucket 1 ∪ Bucket 2",
+                    Name: "Bucket 1 ∩ Bucket 2",
                     Order: null,
-                    data: [{
-                        Id: 1
-                    }, {
+                    data: [jasmine.objectContaining({
+                        Id: 1,
+                    }), jasmine.objectContaining({
                         Id: 4
-                    }]
+                    })]
                 });
 
-                expect(dotChart.buckets[0].data).toEqual([{
-                    Id: 3
-                }]);
+                expect(dotChart.buckets[0].data).toEqual([jasmine.objectContaining({
+                    Id: 3,
+                })]);
 
-                expect(dotChart.buckets[1].data).toEqual([{
-                    Id: 2
-                }]);
+                expect(dotChart.buckets[1].data).toEqual([jasmine.objectContaining({
+                    Id: 2,
+                })]);
             });
         });
 
@@ -134,45 +134,45 @@ describe('CircularVenn', () => {
                 dotChart.addBucket(bucket1)
                     .addBucket(bucket2)
                     .addBucket(bucket3)
-                    .recalculateBuckets();
+                    .calculateBucketIntersections();
 
                 expect(dotChart.centerBucket).toEqual({
                     Color: null,
                     Id: null,
-                    Name: "Bucket 1 ∪ Bucket 2 ∪ Bucket 3",
+                    Name: "Bucket 1 ∩ Bucket 2 ∩ Bucket 3",
                     Order: null,
-                    data: [{
+                    data: [jasmine.objectContaining({
                         Id: 1
-                    }]
+                    })]
                 });
 
                 // Items unique to 1
                 expect(dotChart.buckets[0].data).toEqual([]);
 
                 // (1 ∩ 2) \ 3
-                expect(dotChart.buckets[1].data).toEqual([{
+                expect(dotChart.buckets[1].data).toEqual([jasmine.objectContaining({
                     Id: 4
-                }]);
+                })]);
 
                 // Items unique to 2
-                expect(dotChart.buckets[2].data).toEqual([{
+                expect(dotChart.buckets[2].data).toEqual([jasmine.objectContaining({
                     Id: 2
-                }]);
+                })]);
 
                 // (2 ∩ 3) \ 1
                 expect(dotChart.buckets[3].data).toEqual([]);
 
                 // Items unique to 3
-                expect(dotChart.buckets[4].data).toEqual([{
+                expect(dotChart.buckets[4].data).toEqual([jasmine.objectContaining({
                     Id: 5
-                }, {
+                }), jasmine.objectContaining({
                     Id: 8
-                }]);
+                })]);
 
                 // (3 ∩ 1) \ 2
-                expect(dotChart.buckets[5].data).toEqual([{
+                expect(dotChart.buckets[5].data).toEqual([jasmine.objectContaining({
                     Id: 3
-                }]);
+                })]);
             });
         });
     });
@@ -209,7 +209,7 @@ describe('CircularVenn', () => {
                 .addBucket(sampleBucket2)
                 .addBucket(sampleBucket3)
 
-            dotChart.recalculateBuckets();
+            dotChart.calculateBucketIntersections();
             dotChart.renderCenterCircle();
             dotChart.renderBuckets();
 
@@ -221,7 +221,7 @@ describe('CircularVenn', () => {
                 .addBucket(sampleBucket2)
                 .addBucket(sampleBucket3)
 
-            dotChart.recalculateBuckets();
+            dotChart.calculateBucketIntersections();
             dotChart.renderCenterCircle();
             dotChart.renderBuckets();
 
@@ -230,11 +230,11 @@ describe('CircularVenn', () => {
 
         it('should attach filter classes to the dots', () => {
             dotChart.filtersForEntity = {
-                '1': ['1','2','3']
+                '1': ['1', '2', '3']
             }
 
             dotChart.addBucket(sampleBucket);
-            dotChart.recalculateBuckets();
+            dotChart.calculateBucketIntersections();
             dotChart.renderCenterCircle();
             dotChart.renderBuckets();
 
@@ -261,7 +261,7 @@ describe('CircularVenn', () => {
 
             spyOn(DotChart.prototype, 'render').and.returnValue(null);
             spyOn(dotChart, 'renderCenterCircle').and.returnValue(null);
-            spyOn(dotChart, 'recalculateBuckets').and.returnValue(null);
+            spyOn(dotChart, 'calculateBucketIntersections').and.returnValue(null);
             spyOn(dotChart, 'renderBuckets').and.returnValue(null);
             spyOn(dotChart, 'renderBucketKey').and.returnValue(null);
         })
@@ -279,7 +279,7 @@ describe('CircularVenn', () => {
 
             dotChart.render();
 
-            expect(dotChart.recalculateBuckets).toHaveBeenCalled();
+            expect(dotChart.calculateBucketIntersections).toHaveBeenCalled();
         });
 
         it('should draw the center circle', () => {
@@ -287,7 +287,7 @@ describe('CircularVenn', () => {
 
             dotChart.render();
 
-            expect(dotChart.renderCenterCircle).toHaveBeenCalled();
+            expect(dotChart.calculateBucketIntersections).toHaveBeenCalled();
         });
 
         it('should draw the buckets', () => {

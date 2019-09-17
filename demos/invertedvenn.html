@@ -31,13 +31,15 @@
     }
 
     let invertedVenn = new window.org_christbaptist.CircularVenn("", "New Viz");
-    invertedVenn.addBucket({
+    invertedVenn.setLavaSummary("Woo!")
+    .addBucket({
         Id: 1,
         Name: "Bucket 1",
         Order: 1,
         Color: '#97002e',
         data: generateArray(-200, 240)
-    }).addBucket({
+    })
+    .addBucket({
         Id: 2,
         Name: "Bucket 2",
         Order: 2,

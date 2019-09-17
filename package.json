@@ -27,7 +27,7 @@
   },
   "scripts": {
     "test": "karma start",
-    "dev": "webpack-dev-server --debug --devtool inline-module-source-map --content-base demos/"
+    "dev": "webpack-dev-server --debug --devtool inline-source-map --content-base demos/"
   },
   "author": "",
   "license": "ISC"

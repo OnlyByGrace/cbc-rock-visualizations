@@ -1,6 +1,7 @@
 import * as d3 from 'd3';
 import { Filter } from './filter';
 import { Bucket } from './bucket';
+import { BucketWrapper } from './circularVenn';
 
 export abstract class DotChart {
     buckets: Bucket[] = [];
@@ -14,6 +15,8 @@ export abstract class DotChart {
     mergeObjectName: string = 'Row';
     el: HTMLElement = null;
     summaryPane: HTMLElement = null;
+
+    promiseCount: number = 0;
 
     // HashMap to lookup the filters for a given entity without looping through all filters
     filtersForEntity: { [dataId: string]: Array<string> } = {};
@@ -59,7 +62,7 @@ export abstract class DotChart {
         //     <div class="buckets"><i class="fa fa-chart-bar"></i></div>
         //     <div class="circles"><i class="far fa-circle"></i></div>
         // `;
-        
+
         this.el.append(fullScreenButton);
         // this.el.append(styleSelectorButtons);
 
@@ -70,7 +73,7 @@ export abstract class DotChart {
         this.svg = d3.select(newSVGEl);
         this.title = title;
 
-        document.addEventListener("fullscreenchange", this.onFullScreen.bind(this));
+        this.el.addEventListener("fullscreenchange", this.onFullScreen.bind(this));
 
         if (!this.svg.node()) {
             throw "SVG element does not exist";
@@ -82,7 +85,7 @@ export abstract class DotChart {
     }
 
     onFullScreen() {
-        if (document.fullscreenElement) {
+        if (document.fullscreenElement == this.el) {
             this.el.style.backgroundColor = "#fafafa";
             let expandElement = this.el.getElementsByClassName('fa-expand')[0];
             expandElement.classList.remove('fa-expand');
@@ -90,6 +93,7 @@ export abstract class DotChart {
         } else {
             this.el.style.backgroundColor = "initial";
             let expandElement = this.el.getElementsByClassName('fa-compress')[0];
+            this.el.querySelector('svg').style.height = "initial";
             expandElement.classList.remove('fa-compress');
             expandElement.classList.add('fa-expand');
         }
@@ -120,8 +124,11 @@ export abstract class DotChart {
 
         if (filter.data) {
             filter.data.forEach((entity) => {
-                if (!this.filtersForEntity[entity.Id]) this.filtersForEntity[entity.Id] = [];
-                this.filtersForEntity[entity.Id].push(filter.Id);
+                if (!this.filtersForEntity[entity.Id]) {
+                    this.filtersForEntity[entity.Id] = [filter.Id];
+                } else {
+                    this.filtersForEntity[entity.Id].push(filter.Id);
+                }
             })
         }
 
@@ -146,7 +153,44 @@ export abstract class DotChart {
         return this;
     }
 
-    fetchLavaData(entitiyId: number) {
+    showPopupDialog(mousePosition: { x: number, y: number }, content: Promise<string> | string) {
+        let width = window.innerWidth;
+        let popupX = 0;
+
+        if (mousePosition.x > (width / 2)) {
+            popupX = width / 4 - 200;
+        } else {
+            popupX = width / 4 * 3 - 200;
+        }
+
+        this.summaryPane.style.display = 'initial';
+        this.summaryPane.style.left = popupX + "px";
+
+        if (typeof content === 'string') {
+            this.summaryPane.innerHTML = content;
+            this.promiseCount = 0;
+        } else if (content && typeof content.then === 'function') {
+            // Show loader
+            this.summaryPane.innerHTML = '<div class="lds-dual-ring"></div>';
+            this.promiseCount++;
+            const promiseCountAtTimeOfDispatch = this.promiseCount;
+            content.then((value) => {
+                // If this is not true, it's because there's a new promise in the works
+                if (this.promiseCount == promiseCountAtTimeOfDispatch) {
+                    this.summaryPane.innerHTML = value;
+                    this.promiseCount = 0;
+                }
+            });
+        } else {
+            throw "Not a string or promise";
+        }
+    }
+
+    hidePopupDialog() {
+        this.summaryPane.style.display = 'none';
+    }
+
+    fetchLavaData(entitiyId: number): Promise<string> {
         // let filtersForLava = '';
         // if (peopleInDataViews[GroupMember.Id]) {
         //     filtersForLava = `
@@ -179,20 +223,24 @@ export abstract class DotChart {
         //         }
         //     })
         if (this.lavaTemplate) {
-            fetch(`/api/Lava/RenderTemplate?additionalMergeObjects=${this.entityTypeId}|${this.mergeObjectName}|${entitiyId}`, {
-                credentials: "include",
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                body: this.lavaTemplate
-            }).then((response) => {
-                response.json().then((fulfilledLava) => {
-                    this.summaryPane.textContent = fulfilledLava;
+            return new Promise<string>((resolve, reject) => {
+                fetch(`/api/Lava/RenderTemplate?additionalMergeObjects=${this.entityTypeId}|${this.mergeObjectName}|${entitiyId}`, {
+                    credentials: "include",
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: this.lavaTemplate
+                }).then((response) => {
+                    response.json().then((fulfilledLava) => {
+                        resolve(fulfilledLava);
+                    })
                 })
             });
         }
+
+        return null;
     }
 
     renderFilterKey(x = 0, y = 0) {
@@ -311,6 +359,7 @@ export abstract class DotChart {
                 background-color: white;
                 height: auto;
                 width: 400px;
+                top: 200px;
                 box-shadow: black 0px 0px 5px;
                 margin-left: 2.5%;
                 margin-top: 2.5%;
@@ -319,7 +368,7 @@ export abstract class DotChart {
                 position: fixed;
             }
 
-            #${this.elementId}.lds-dual-ring {
+            #${this.elementId} .lds-dual-ring {
                 margin-left: auto;
                 margin-right: auto;
                 display: block;
@@ -327,7 +376,7 @@ export abstract class DotChart {
                 height: 64px;
               }
 
-              #${this.elementId}.lds-dual-ring:after {
+              #${this.elementId} .lds-dual-ring:after {
                 content: " ";
                 display: block;
                 width: 46px;
@@ -452,6 +501,26 @@ export abstract class DotChart {
         svgEl.parentNode.insertBefore(styleTag, svgEl);
     }
 
+    attachEventHandlers() {
+        if (this.lavaTemplate) {
+            this.svg.selectAll('.dot').on('mouseover', (d: any) => {
+                this.showPopupDialog({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.fetchLavaData(d.data.Id));
+            });
+
+            this.svg.selectAll('.dot').on('mouseout', (d, i) => {
+                this.hidePopupDialog();
+            })
+        }
+
+        this.svg.selectAll('g.bucket .base').on('mouseover', (d: BucketWrapper) => {
+            this.showPopupDialog({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.getBucketHTMLSummary(d));
+        });
+
+        this.svg.selectAll('g.bucket .base').on('mouseout', () => {
+            this.hidePopupDialog();
+        });
+    }
+
     /**
      * Render
      * 
@@ -501,6 +570,9 @@ export abstract class DotChart {
             this.renderTitle(this.xcenter, newTop);
         }
 
+        // Attach event handlers
+        this.attachEventHandlers();
+
         this.disabledFilters.forEach((disabledFilterId) => this.hideFilter(disabledFilterId));
     }
 
@@ -541,20 +613,53 @@ export abstract class DotChart {
         }
     }
 
+    getBucketHTMLSummary(bucket: BucketWrapper) {
+        let filterCounts = {};
+        for (let i=0;i<this.filters.length;i++) {
+            filterCounts[i] = bucket.data.data.filter((entity) => {
+                let entityId = entity.Id;
+                let entityFilters = this.filtersForEntity[entityId];
+                return entityFilters && entityFilters.some((eFilter) => eFilter == this.filters[i].Id)
+            }).length;
+        }
+
+        let displayString = `
+            <div class='text-center'>
+                <h2>${bucket.data.Name}</h2>
+
+                <table>
+                    <tr>
+                        <th style="width: 75%"></th>
+                        <th style="width: 25%"></th>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold;">Total Members:</td>
+                        <td>${bucket.data.data.length}</td>
+                    </tr>`;
+        for (let filterCount of Object.keys(filterCounts)) {
+            displayString += `<tr><td style="font-weight: bold;">${this.filters[filterCount].DisplayName}:</td><td>${filterCounts[filterCount]} (${(filterCounts[filterCount] / (bucket.data.data.length || 1) * 100).toFixed(0)}%)</td></tr>`
+        }
+        displayString += `</table>
+            </div>
+        `
+
+        return displayString;
+    }
+
     /**
      * Attach filter to a dot
      */
-    attachFilters(dot, Id) {
-        dot.attr('data-Id')
-        if (!this.filtersForEntity[Id]) {
-            dot.attr('class', 'dot');
-            return;
+    attachFilters(dotEl, d): string {
+        let filters = this.filtersForEntity[d.data.Id];
+
+        if (!filters) {
+            return 'dot';
         }
 
-        dot.attr('class', `dot filter-${this.filtersForEntity[Id].join(' filter-')}`);
-        this.filtersForEntity[Id].forEach((filter) => {
+        filters.forEach((filter) => {
             if (!this.elementsForFilter[filter]) this.elementsForFilter[filter] = [];
-            this.elementsForFilter[filter].push(dot.node());
+            this.elementsForFilter[filter].push(dotEl);
         });
+        return `dot filter-${filters.join(' filter-')}`;
     }
 }

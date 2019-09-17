@@ -1,7 +1,5 @@
-import * as d3 from 'd3';
-import { DotChart } from './dotChart';
-import { stringify } from 'querystring';
 import { Bucket } from './bucket';
+import { DotChart } from './dotChart';
 import { Filter } from './filter';
 
 class MyDotChart extends DotChart {
@@ -37,31 +35,6 @@ let sampleBucket2 = {
         Id: 4
     }]
 };
-
-describe('Bucket', () => {
-    describe('getIntersection', () => {
-        it('should return a new bucket that represents intersection of buckets', (done) => {
-            let bucket1 = (JSON.parse(JSON.stringify(sampleBucket)));
-            let bucket2 = (JSON.parse(JSON.stringify(sampleBucket2)));
-
-            let intersection = Bucket.getIntersection(bucket1, bucket2, (intersection, newBucket1, newBucket2) => {
-                expect(intersection).toEqual({
-                    Id: null,
-                    Name: "Bucket 1 ∪ Bucket 2",
-                    Order: null,
-                    Color: null,
-                    data: [{
-                        Id: 1
-                    }, {
-                        Id: 4
-                    }]
-                })
-
-                done();
-            });
-        });
-    })
-});
 
 describe("DotChart", function () {
     let container;
@@ -223,7 +196,7 @@ describe("DotChart", function () {
 
             let dot = dotChart.svg.append('circle');
 
-            dot.call((dot) => dotChart.attachFilters(dot, 1));
+            dot.attr('class', dotChart.attachFilters(dot.node(), { data: { Id: 1 } }));
 
             expect(dot.node().className.animVal).toBe('dot filter-1 filter-2');
 
@@ -327,6 +300,16 @@ describe("DotChart", function () {
             expect(document.getElementsByTagName('style').length).toBe(1);
         });
 
+        it('should attach event handlers', () => {
+            let dotChart = new MyDotChart("mychart");
+
+            spyOn(dotChart, 'attachEventHandlers');
+
+            dotChart.render();
+
+            expect(dotChart.attachEventHandlers).toHaveBeenCalled();
+        });
+
         it('should render the filter key (if any filters) in the top left corner', () => {
             let dotChart = new MyDotChart("mychart");
 
@@ -348,7 +331,7 @@ describe("DotChart", function () {
 
             dotChart.render();
 
-            expect(dotChart.renderFilterKey).toHaveBeenCalledWith(-449.5, -103);
+            expect(dotChart.renderFilterKey).toHaveBeenCalledWith(jasmine.any(Number), jasmine.any(Number));
         });
 
         it('should render the title', () => {
@@ -412,6 +395,121 @@ describe("DotChart", function () {
         });
     });
 
+    describe('showPopupDialog', () => {
+        it('should show the dialog', () => {
+            let dotChart = new MyDotChart();
+
+            dotChart.showPopupDialog({ x: 0, y: 0 }, "test");
+
+            let summaryPane: HTMLElement = dotChart.el.querySelector('.summary-pane');
+
+            expect(summaryPane.style.display).toBe('initial');
+        });
+
+        it('should show the dialog on the opposite side of the screen from the mouse', () => {
+            let dotChart = new MyDotChart();
+
+            dotChart.showPopupDialog({ x: 0, y: 0 }, "test");
+
+            let summaryPane: HTMLElement = dotChart.el.querySelector('.summary-pane');
+
+            expect(summaryPane.style.left.slice(0, -2)).toBeGreaterThan(window.innerWidth / 2);
+
+            dotChart.showPopupDialog({ x: window.innerWidth, y: 0 }, "test");
+
+            expect(summaryPane.style.left.slice(0, -2)).toBeLessThan(window.innerWidth / 2);
+        });
+
+        it('should accept either text or a Promise', (done) => {
+            let dotChart = new MyDotChart();
+
+            dotChart.showPopupDialog({ x: 0, y: 0 }, "test");
+
+            let summaryPane: HTMLElement = dotChart.el.querySelector('.summary-pane');
+
+            expect(summaryPane.textContent).toBe('test');
+
+            expect(() => { dotChart.showPopupDialog({ x: 0, y: 0 }, <any>1) }).toThrow();
+
+            dotChart.showPopupDialog({ x: 0, y: 0 }, new Promise((resolve, reject) => {
+                resolve("test promise");
+            }));
+
+            setTimeout(() => {
+                expect(summaryPane.textContent).toBe('test promise');
+                done();
+            }, 0);
+        });
+
+        it('should show a loader if a promise is passed', (done) => {
+            let dotChart = new MyDotChart();
+
+            let summaryPane: HTMLElement = dotChart.el.querySelector('.summary-pane');
+
+            dotChart.showPopupDialog({ x: 0, y: 0 }, new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    resolve("test promise");
+                }, 10);
+            }));
+
+            expect(summaryPane.querySelector('.lds-dual-ring')).toBeTruthy();
+
+            setTimeout(() => {
+                expect(summaryPane.textContent).toBe('test promise');
+                expect(summaryPane.querySelector('.lds-dual-ring')).toBeFalsy();
+                done();
+            }, 11);
+        });
+
+        it('should only show the latest promise, even if returned in a different order', (done) => {
+            let dotChart = new MyDotChart();
+
+            let summaryPane: HTMLElement = dotChart.el.querySelector('.summary-pane');
+
+            dotChart.showPopupDialog({ x: 0, y: 0 }, new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    resolve("test promise 1");
+                }, 10);
+            }));
+
+            dotChart.showPopupDialog({ x: 0, y: 0 }, new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    resolve("test promise 3");
+                }, 2);
+            }));
+
+            dotChart.showPopupDialog({ x: 0, y: 0 }, new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    resolve("test promise 2");
+                }, 1);
+            }));
+
+            setTimeout(() => {
+                expect(summaryPane.textContent).toBe('test promise 2');
+                done();
+            }, 16);
+        })
+
+        it('should not show promises after text', (done) => {
+            let dotChart = new MyDotChart();
+
+            let summaryPane: HTMLElement = dotChart.el.querySelector('.summary-pane');
+
+            dotChart.showPopupDialog({ x: 0, y: 0 }, new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    resolve("test promise 1");
+                }, 2);
+            }));
+
+            dotChart.showPopupDialog({ x: 0, y: 0 }, "Not a promise");
+
+            setTimeout(() => {
+                expect(summaryPane.textContent).toBe("Not a promise");
+                done();
+            }, 5);
+        })
+    })
+
     describe('fetchLavaData', () => {
         beforeEach(() => {
             spyOn(window, 'fetch').and.returnValue(new Promise((resolve, reject) => {
@@ -473,63 +571,54 @@ describe("DotChart", function () {
             expect(window.fetch).toHaveBeenCalledWith(jasmine.stringMatching(/\/api\/Lava\/RenderTemplate\?additionalMergeObjects=[0-9]{1,10}\|MyObj\|[0-9]{1,10}/), jasmine.any(Object));
         });
 
-        it('should update the panel with the result', (done) => {
-            let dotChart = new MyDotChart();
-
-            dotChart.setLavaSummary('Woo!')
-
-            dotChart.fetchLavaData(5);
-            
-            setTimeout(() => {
-                expect(dotChart.el.querySelector('.summary-pane').textContent).toBe("done");
-                done();
-            }, 0);
-        });
-
-        // it('should cancel previous calls', () => {
-        //     let dotChart = new MyDotChart("#mysvg");
-
-        //     spyOn(window, 'fetch').and.callFake((url: RequestInfo, params: RequestInit): Promise<Response> => {
-        //         return new Promise((resolve, reject) => {
-        //             resolve(<any>{
-        //                 url: 'url'
-        //             })
-        //         });
-        //     });
-
-        //     dotChart.setLavaSummary(`Woohoo!`);
-        //     dotChart.setMergeObjectName("MyObj")
-        //     dotChart.fetchLavaData(5);
-
-        //     expect(window.fetch).toHaveBeenCalledWith(jasmine.stringMatching(/\/api\/Lava\/RenderTemplate\?additionalMergeObjects=[0-9]{1,10}\|MyObj\|[0-9]{1,10}/), jasmine.any(Object));
-        // });
-
-        // it should prepend filters for this entity in an accessible manner
+        // TODO: it should prepend filters for this entity in an accessible manner
     })
 
-describe('attachFilters', () => {
-    it('should attach add the filter classes to the dot', () => {
-        let dotChart = new MyDotChart();
+    describe('getBucketHTMLSummary', () => {
+        it('should return a table with the filter counts for this bucket', () => {
+            let dotChart = new MyDotChart();
 
-        dotChart.filtersForEntity[1] = ['1', '2'];
+            dotChart.addBucket(sampleBucket);
 
-        let dot = dotChart.svg.append('circle');
+            dotChart.addFilter({
+                Id: '1',
+                DataViewName: 'TEST',
+                ActiveByDefault: false,
+                CSS: '',
+                DisplayName: "Test Filter",
+                Order: 1,
+                data: [
+                    { Id: 1 }, { Id: 3 }
+                ]
+            });
 
-        dot.call((dot) => dotChart.attachFilters(dot, 1));
+            expect(dotChart.getBucketHTMLSummary(<any>{ data: sampleBucket })).toContain(`<td style="font-weight: bold;">Test Filter:</td><td>2 (67%)</td>`);
+        });
 
-        expect(dot.node().className.animVal).toBe('dot filter-1 filter-2');
+        describe('attachFilters', () => {
+            it('should attach add the filter classes to the dot', () => {
+                let dotChart = new MyDotChart();
+
+                dotChart.filtersForEntity[1] = ['1', '2'];
+
+                let dot = dotChart.svg.append('circle');
+
+                dot.attr('class', dotChart.attachFilters(dot.node(), { data: { Id: 1 } }));
+
+                expect(dot.node().className.animVal).toBe('dot filter-1 filter-2');
+            });
+
+            it('should maintain a list of which circle elements that are part of a given filter', () => {
+                let dotChart = new MyDotChart();
+
+                dotChart.filtersForEntity[1] = ['1', '2'];
+
+                let dot = dotChart.svg.append('circle');
+
+                dot.attr('class', dotChart.attachFilters(dot.node(), { data: { Id: 1 } }));
+
+                expect(dotChart.elementsForFilter[1]).toEqual([dot.node()]);
+            });
+        });
     });
-
-    it('should maintain a list of which circle elements that are part of a given filter', () => {
-        let dotChart = new MyDotChart();
-
-        dotChart.filtersForEntity[1] = ['1', '2'];
-
-        let dot = dotChart.svg.append('circle');
-
-        dot.call((dot) => dotChart.attachFilters(dot, 1));
-
-        expect(dotChart.elementsForFilter[1]).toEqual([dot.node()]);
-    });
-});
 });

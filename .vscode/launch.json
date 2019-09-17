@@ -8,7 +8,7 @@
             "type": "chrome",
             "request": "launch",
             "name": "Launch Chrome against localhost",
-            "url": "file:///C:/Users/LukeBennett/Projects/d3 Visualizations/invertedvenn.html",
+            "url": "http://localhost:8080/invertedvenn.html",
             "webRoot": "${workspaceFolder}"
         }
     ]
