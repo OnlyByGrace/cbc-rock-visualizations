@@ -11,7 +11,11 @@ export function parseColor(input) {
 
 export const EntityTypeURLs = {
     15: '/api/People/DataView/', // People
-    16: '/api/Groups/DataView/' // Group
+    16: '/api/Groups/DataView/', // Group
+    113: '/api/Workflows/DataView/', // Workflows
+    240: '/api/ConnectionRequests/DataView/', // ConnectionRequests
+    258: '/api/Registrations/DataView/', // Registrations
+    313: '/api/RegistrationRegistrants/DataView/' // Registration Registrants
 }
 
 export function FillDVBucketsOrFilters(bucketOrFilters: Bucket[] | Filter[], entityTypeId): Promise<Array<Bucket | Filter>> {
@@ -19,7 +23,7 @@ export function FillDVBucketsOrFilters(bucketOrFilters: Bucket[] | Filter[], ent
 
     for (let item of bucketOrFilters) {
         promises.push(new Promise((resolve, reject) => {
-            fetch(EntityTypeURLs[entityTypeId] + item.Id + "?$select=Id", { credentials: "include" }).then((response) => {
+            fetch(EntityTypeURLs[entityTypeId] + item.Id + "?$select=Id&$orderby=Id", { credentials: "include" }).then((response) => {
                 response.json().then((json) => {
                     item.data = json;
                     resolve(item);

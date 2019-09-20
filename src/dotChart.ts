@@ -13,10 +13,16 @@ export abstract class DotChart {
     lavaTemplate: string;
     entityTypeId: number = 15; // Default to Person
     mergeObjectName: string = 'Row';
+
+    bucketUrl: string;
+    entityUrl: string;
+
     el: HTMLElement = null;
     summaryPane: HTMLElement = null;
 
     promiseCount: number = 0;
+
+    _showFilterKey: boolean = true;
 
     // HashMap to lookup the filters for a given entity without looping through all filters
     filtersForEntity: { [dataId: string]: Array<string> } = {};
@@ -141,14 +147,32 @@ export abstract class DotChart {
 
     setMergeObjectName(newName: string) {
         this.mergeObjectName = newName;
+        return this;
     }
 
     setEntityType(newEntityTypeId: number) {
         this.entityTypeId = newEntityTypeId;
+        return this;
     }
 
     setLavaSummary(newLavaTemplate: string) {
         this.lavaTemplate = newLavaTemplate;
+
+        return this;
+    }
+
+    setEntityUrl(newUrl: string) {
+        this.entityUrl = newUrl;
+        return this;
+    }
+
+    setBucketUrl(newUrl: string) {
+        this.bucketUrl = newUrl;
+        return this;
+    }
+
+    showFilterKey(show: boolean) {
+        this._showFilterKey = show;
 
         return this;
     }
@@ -190,48 +214,33 @@ export abstract class DotChart {
         this.summaryPane.style.display = 'none';
     }
 
-    fetchLavaData(entitiyId: number): Promise<string> {
-        // let filtersForLava = '';
-        // if (peopleInDataViews[GroupMember.Id]) {
-        //     filtersForLava = `
-        //         {% assign Filters = '${peopleInDataViews[GroupMember.Id].join(',')}' | Split:',' %}
-        //      `;
-        // }
+    fetchLavaData(entityId: number): Promise<string> {
+        let filtersForLava = '';
+        let entityFilters = this.filtersForEntity[entityId]
+        if (entityFilters) {
+            filtersForLava = `
+                {% capture jsonString %}
+                    ${JSON.stringify(entityFilters.map((filter) => {
+                        let filterPrototype: Filter = <any>{};
+                        Object.assign(filterPrototype, this.filters.find((filterProto) => filterProto.Id == filter));
+                        delete filterPrototype.data;
+                        return filterPrototype;
+                    }))}
+                {% endcapture %}
+                {% assign Filters = jsonString | FromJSON %}
+             `;
+        }
 
-
-        // summaryPromiseLock += 1;
-        // fetch(`/api/Lava/RenderTemplate?additionalMergeObjects=${groups ? "90|GroupMember" : "15|Row"}|${GroupMember.Id}`, {
-        //     credentials: "include", method: 'POST',
-        //     headers: {
-        //         'Accept': 'application/json',
-        //         'Content-Type': 'application/json'
-        //     },
-        //     body: filtersForLava + summaryLava
-        // })
-        //     .then((rawData) => {
-        //         // Promise lock so that as we're hovering quickly it always shows the latest web call in the popup
-        //         // TODO: Need a way to be sure it actually is the latest webcall -- way to cancel previous callback
-        //         if (summaryPromiseLock > 0)
-        //             summaryPromiseLock -= 1;
-        //         else
-        //             return;
-
-        //         if (summaryPromiseLock == 0) {
-        //             rawData.json().then((parsedLava) => {
-        //                 d3.select('.summary-pane').html(parsedLava);
-        //             })
-        //         }
-        //     })
         if (this.lavaTemplate) {
             return new Promise<string>((resolve, reject) => {
-                fetch(`/api/Lava/RenderTemplate?additionalMergeObjects=${this.entityTypeId}|${this.mergeObjectName}|${entitiyId}`, {
+                fetch(`/api/Lava/RenderTemplate?additionalMergeObjects=${this.entityTypeId}|${this.mergeObjectName}|${entityId}`, {
                     credentials: "include",
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json'
                     },
-                    body: this.lavaTemplate
+                    body: filtersForLava + this.lavaTemplate
                 }).then((response) => {
                     response.json().then((fulfilledLava) => {
                         resolve(fulfilledLava);
@@ -250,7 +259,7 @@ export abstract class DotChart {
 
         // Update the filter counts
         for (let filter of sortedFilters) {
-            filter.count = document.getElementsByClassName('filter-' + filter.Id).length;
+            filter.count = (this.elementsForFilter[filter.Id] && this.elementsForFilter[filter.Id].length) || 0;
         }
 
         let svgFiltersGroupEl = this.svg.insert('g', ':first-child')
@@ -316,7 +325,7 @@ export abstract class DotChart {
         styleTag.textContent = `
             #${this.elementId} {
                 display: flex;
-                height: 100vh;
+                height: calc(100vh - 160px);
                 width: 100%;
                 flex-direction: column;
             }
@@ -412,7 +421,7 @@ export abstract class DotChart {
                 text-anchor: middle;
             }
         
-            .filter {
+            .filter, .bucket {
                 cursor: pointer;
             }
         
@@ -502,23 +511,39 @@ export abstract class DotChart {
     }
 
     attachEventHandlers() {
+        let dots = this.svg.selectAll('.dot');
+
         if (this.lavaTemplate) {
-            this.svg.selectAll('.dot').on('mouseover', (d: any) => {
+            dots.on('mouseover', (d: any) => {
                 this.showPopupDialog({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.fetchLavaData(d.data.Id));
             });
 
-            this.svg.selectAll('.dot').on('mouseout', (d, i) => {
+            dots.on('mouseout', (d, i) => {
                 this.hidePopupDialog();
             })
         }
 
-        this.svg.selectAll('g.bucket .base').on('mouseover', (d: BucketWrapper) => {
+        if (this.entityUrl) {
+            dots.on('click', (d: any) => {
+                window.open(this.entityUrl.replace("{{Id}}", d.data.Id.toString()), "_blank");
+            });
+        }
+
+        let buckets = this.svg.selectAll('g.bucket .base');
+
+        buckets.on('mouseover', (d: BucketWrapper) => {
             this.showPopupDialog({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.getBucketHTMLSummary(d));
         });
 
-        this.svg.selectAll('g.bucket .base').on('mouseout', () => {
+        buckets.on('mouseout', () => {
             this.hidePopupDialog();
         });
+
+        if (this.bucketUrl) {
+            buckets.on('click', (d: any) => {
+                if (d.data.Id) window.open(this.bucketUrl.replace("{{Id}}", d.data.Id.toString()), "_blank");
+            });
+        }
     }
 
     /**
@@ -528,6 +553,8 @@ export abstract class DotChart {
      * function to scale the chart and draw the filter key
      */
     render() {
+        console.log(this.filters);
+
         this.renderStyles();
 
         // Scale to fit
@@ -562,7 +589,7 @@ export abstract class DotChart {
 
         this.svg.attr('viewBox', `${this.xcenter - diagramWidth} ${newTop} ${(diagramWidth * 2)} ${newBottom + Math.abs(newTop)}`)
 
-        if (this.filters.length) {
+        if (this.filters.length && this._showFilterKey) {
             this.renderFilterKey(diagramWidth == Infinity ? 0 : this.xcenter - diagramWidth + 100, newTop);
         }
 
@@ -615,7 +642,7 @@ export abstract class DotChart {
 
     getBucketHTMLSummary(bucket: BucketWrapper) {
         let filterCounts = {};
-        for (let i=0;i<this.filters.length;i++) {
+        for (let i = 0; i < this.filters.length; i++) {
             filterCounts[i] = bucket.data.data.filter((entity) => {
                 let entityId = entity.Id;
                 let entityFilters = this.filtersForEntity[entityId];

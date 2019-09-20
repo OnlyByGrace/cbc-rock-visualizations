@@ -73,10 +73,10 @@ describe('FillDVBucketsOrFilters', () => {
 
         // Person entity type
         FillDVBucketsOrFilters(buckets, 15);
-        expect(window.fetch).toHaveBeenCalledWith(EntityTypeURLs[15] + "1?$select=Id", { credentials: "include" })
+        expect(window.fetch).toHaveBeenCalledWith(EntityTypeURLs[15] + "1?$select=Id&$orderby=Id", { credentials: "include" })
 
         // Group entity type
         FillDVBucketsOrFilters(buckets, 16);
-        expect(window.fetch).toHaveBeenCalledWith(EntityTypeURLs[16] + "2?$select=Id", { credentials: "include" })
+        expect(window.fetch).toHaveBeenCalledWith(EntityTypeURLs[16] + "2?$select=Id&$orderby=Id", { credentials: "include" })
     });
 });

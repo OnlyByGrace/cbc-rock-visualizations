@@ -9,7 +9,19 @@ export class Bucket {
 
     dynamic?: boolean;
 
-    static getIntersection(bucket1: Bucket, bucket2: Bucket, callback: (intersection: Bucket, bucket1Without2: Bucket, bucket2Without: Bucket) => void) {
+    /**
+     * getIntersectoin
+     * 
+     * Returns the intersection of the two buckets, and each bucket without the intersecting points.
+     * It is a pure function.
+     * 
+     * VERY IMPORTANT!! --> Buckets MUST BE SORTED ASC by Id
+     * 
+     * @param bucket1 A bucket sorted by Id ASC
+     * @param bucket2 A second bucket sorted by Id ASC
+     * @param callback A function that will return the intersection, and new buckets
+     */
+    static getIntersection(bucket1: Bucket, bucket2: Bucket, callback: (intersection: Bucket, bucket1Without2: Bucket, bucket2Without1: Bucket) => void) {
         let newBucket1: Bucket = {
             Id: bucket1.Id,
             Name: bucket1.Name,

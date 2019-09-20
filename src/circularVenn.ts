@@ -51,16 +51,17 @@ export class CircularVenn extends DotChart {
     calculateBucketIntersections() {
         if (this.buckets.length == 1) {
             this.centerBucket = {
-                Id: null,
-                Color: null,
+                Id: this.buckets[0].Id,
+                Color: this.buckets[0].Color,
                 Order: null,
-                Name: "Intersection",
+                Name: this.buckets[0].Name,
                 data: this.buckets[0].data
             }
             this.buckets = [];
         } else if (this.buckets.length == 2) {
             Bucket.getIntersection(this.buckets[0], this.buckets[1], (intersection, bucket1NonIntersect, bucket2NonIntersect) => {
                 this.centerBucket = intersection;
+                this.centerBucket.dynamic = true;
                 this.buckets = [bucket1NonIntersect, bucket2NonIntersect];
             });
         } else if (this.buckets.length == 3) {
@@ -74,6 +75,7 @@ export class CircularVenn extends DotChart {
                             intersection12Excluding3.dynamic = true;
                             intersection23excluding1.dynamic = true;
                             intersection13excluding2.dynamic = true;
+                            this.centerBucket.dynamic = true;
                             this.buckets = [bucket1Without23, intersection12Excluding3, bucket2Without13, intersection23excluding1, bucket3without12, intersection13excluding2];
                         });
                     });
@@ -115,13 +117,15 @@ export class CircularVenn extends DotChart {
         let arcCircleRadius = (Math.max(centerCircleBBox.width, centerCircleBBox.height) / 2) + 50;
 
         // Add another center circle so a hover will show statistics
-        this.svg.select('.center-bucket').append("circle")
+        this.svg.select('.center-bucket').insert("circle",":first-child")
             .data([{ data: this.centerBucket }])
             .attr('class', 'base')
             .attr('cx', centerCircleX)
             .attr('cy', centerCircleY)
             .attr('r', arcCircleRadius)
             .style('fill','transparent')
+            .style('stroke', (d) => d.data.Color)
+            .style('stroke-width', "25px");
 
         // let chartGroup = this.svg.append('g');
         // let chartArcEnter = chartGroup.selectAll('g').data(this.buckets).enter();
@@ -284,7 +288,7 @@ export class CircularVenn extends DotChart {
         let totalWidth = 0;
         let currentX = 0;
 
-        let bucketKeyGroupEnter = bucketKeyGroup.selectAll('g').data(this.buckets.filter((bucket) => bucket.dynamic != true)).enter();
+        let bucketKeyGroupEnter = bucketKeyGroup.selectAll('g').data(this.buckets.concat(this.centerBucket).filter((bucket) => bucket.dynamic != true)).enter();
 
         let bucketKeyItemGroup = bucketKeyGroupEnter.append('g');
         bucketKeyItemGroup.append('rect').attr('width', '20').attr('height', '20').attr('fill', (d) => d.Color);

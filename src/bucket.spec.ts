@@ -50,5 +50,34 @@ describe('Bucket', () => {
                 done();
             });
         });
+
+        it('should callback with mutually exclusive buckets', (done) => {
+            let bucket1 = JSON.parse(JSON.stringify(sampleBucket));
+            let bucket2 = JSON.parse(JSON.stringify(sampleBucket2));
+
+            let intersection = Bucket.getIntersection(bucket1, bucket2, (intersection, newBucket1, newBucket2) => {
+                expect(intersection).toEqual({
+                    Id: null,
+                    Name: "Bucket 1 ∩ Bucket 2",
+                    Order: null,
+                    Color: null,
+                    data: [{
+                        Id: 1
+                    }, {
+                        Id: 4
+                    }]
+                })
+
+                expect(newBucket1.data).toEqual([{
+                    Id: 3
+                }])
+
+                expect(newBucket2.data).toEqual([{
+                    Id: 2
+                }])
+
+                done();
+            });
+        });
     });
 });

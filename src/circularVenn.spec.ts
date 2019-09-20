@@ -225,7 +225,7 @@ describe('CircularVenn', () => {
             dotChart.renderCenterCircle();
             dotChart.renderBuckets();
 
-            expect(dotChart.svg.selectAll('circle').nodes().length).toBe(6);
+            expect(dotChart.svg.selectAll('circle').nodes().length).toBe(7); // + 1 for the center bucket
         });
 
         it('should attach filter classes to the dots', () => {
