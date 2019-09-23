@@ -1,5 +1,25 @@
 import { parseColor } from './util';
 
+export class BucketWrapper {
+    startingDegree?: number;
+    endingDegree?: number;
+    x: number;
+    y: number;
+    r?: number;
+    overlapDegrees?: number;
+    children: DotWrapper[];
+    parent?: any;
+
+    data: Bucket;
+}
+
+export interface DotWrapper {
+    data: any;
+    x: number;
+    y: number;
+    r: number;
+}
+
 export class Bucket {
     Id: number;
     Name: string;

@@ -2,6 +2,8 @@ import { Bucket } from './bucket';
 import { DotChart } from './dotChart';
 import { Filter } from './filter';
 
+window.d3 = require('d3');
+
 class MyDotChart extends DotChart {
     constructor(svgId?: string, title: string = "") {
         super(svgId, title);
@@ -135,7 +137,7 @@ describe("DotChart", function () {
 
         dotChart.addFilter({
             Id: '1',
-            DisplayName: "Test Filter",
+            DisplayAs: "Test Filter",
             ActiveByDefault: false,
             CSS: '',
             DataViewName: "Test Filter",
@@ -214,7 +216,7 @@ describe("DotChart", function () {
 
             let newFilter: Filter = {
                 Id: "1",
-                DisplayName: "Test",
+                DisplayAs: "Test",
                 DataViewName: "Test",
                 CSS: "",
                 ActiveByDefault: false,
@@ -231,7 +233,7 @@ describe("DotChart", function () {
 
             let newFilter: Filter = {
                 Id: "1",
-                DisplayName: "Test",
+                DisplayAs: "Test",
                 DataViewName: "Test",
                 CSS: "",
                 ActiveByDefault: false,
@@ -267,7 +269,7 @@ describe("DotChart", function () {
             let dotChart = new MyDotChart("svgChart");
 
             dotChart.addFilter({
-                DisplayName: "Test",
+                DisplayAs: "Test",
                 ActiveByDefault: false,
                 CSS: '',
                 DataViewName: "Test",
@@ -320,7 +322,7 @@ describe("DotChart", function () {
 
             dotChart.addFilter({
                 Id: "1",
-                DisplayName: "Test",
+                DisplayAs: "Test",
                 DataViewName: "Test",
                 CSS: "",
                 ActiveByDefault: false,
@@ -373,7 +375,7 @@ describe("DotChart", function () {
 
             expect(document.querySelector('style').textContent).toContain(`#mychart {
                 display: flex;
-                height: 100vh;
+                height: calc(100vh - 160px);
                 width: 100%;`);
         });
 
@@ -382,7 +384,7 @@ describe("DotChart", function () {
 
             dotChart.addFilter({
                 Id: "1",
-                DisplayName: "Test",
+                DisplayAs: "Test",
                 DataViewName: "Test",
                 CSS: "fill: green",
                 ActiveByDefault: false,
@@ -585,7 +587,7 @@ describe("DotChart", function () {
                 DataViewName: 'TEST',
                 ActiveByDefault: false,
                 CSS: '',
-                DisplayName: "Test Filter",
+                DisplayAs: "Test Filter",
                 Order: 1,
                 data: [
                     { Id: 1 }, { Id: 3 }

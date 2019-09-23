@@ -14,7 +14,7 @@
     </style>
 </head>
 
-<body>
+<body style="background-color: #efefef;">
 
 </body>
 <script src="https://d3js.org/d3.v5.min.js"></script>
@@ -29,6 +29,58 @@
         }
         return array;
     }
+
+    new window.org_christbaptist.ColumnCircleChart("", "New Viz").setLavaSummary("Woo!").setBucketUrl('test')
+        .addBucket({
+            Id: 1,
+            Name: "Bucket 1",
+            Order: 1,
+            Color: '#97002e',
+            data: generateArray(-200, 240)
+        })
+        .addBucket({
+            Id: 2,
+            Name: "Bucket 2",
+            Order: 2,
+            Color: '#005a40',
+            data: generateArray(0, 100).concat(generateArray(101, 360))
+        })
+        .addBucket({
+            Id: 3,
+            Name: "Bucket 3",
+            Order: 3,
+            Color: '#003763',
+            data: generateArray(0, 126).concat(generateArray(220, 680))
+        })
+        .addFilter({
+            Id: 1,
+            DisplayAs: "Test Filter",
+            ActiveByDefault: false,
+            Order: 1,
+            CSS: 'fill: blue',
+            data: [
+                { Id: 100 },
+                { Id: 2 },
+                { Id: 3 },
+                { Id: 4 },
+                { Id: 5 }
+            ]
+        }).addFilter({
+            Id: 2,
+            DisplayAs: "Test Filter 1",
+            ActiveByDefault: true,
+            CSS: 'fill: green',
+            Order: 2,
+            data: [
+                { Id: 101 },
+                { Id: 2 },
+                { Id: 3 },
+                { Id: 4 },
+                { Id: 5 },
+                { Id: 8 }
+            ]
+        })
+        .render();
 
     let invertedVenn = new window.org_christbaptist.CircularVenn("", "New Viz");
     invertedVenn.setLavaSummary("Woo!")
@@ -55,7 +107,7 @@
         })
         .addFilter({
             Id: 1,
-            DisplayName: "Test Filter",
+            DisplayAs: "Test Filter",
             ActiveByDefault: false,
             Order: 1,
             CSS: 'fill: blue',
@@ -68,7 +120,7 @@
             ]
         }).addFilter({
             Id: 2,
-            DisplayName: "Test Filter 1",
+            DisplayAs: "Test Filter 1",
             ActiveByDefault: true,
             CSS: 'fill: green',
             Order: 2,
@@ -107,14 +159,14 @@
         })
         .addFilter({
             Id: 1,
-            DisplayName: "Test Filter",
+            DisplayAs: "Test Filter",
             ActiveByDefault: false,
             Order: 1,
             CSS: 'fill: yellow',
             data: generateArray(-70, 50)
         }).addFilter({
             Id: 2,
-            DisplayName: "Test Filter 1",
+            DisplayAs: "Test Filter 1",
             ActiveByDefault: true,
             Order: 2,
             CSS: 'fill: green',
@@ -145,7 +197,7 @@
         })
         .addFilter({
             Id: 1,
-            DisplayName: "Test Filter",
+            DisplayAs: "Test Filter",
             ActiveByDefault: false,
             Order: 1,
             CSS: 'fill: blue',
@@ -158,7 +210,7 @@
             ]
         }).addFilter({
             Id: 2,
-            DisplayName: "Test Filter 1",
+            DisplayAs: "Test Filter 1",
             ActiveByDefault: true,
             Order: 2,
             CSS: 'fill: red',
@@ -181,7 +233,7 @@
     }).setBucketUrl('test')
         .addFilter({
             Id: 1,
-            DisplayName: "Test Filter",
+            DisplayAs: "Test Filter",
             ActiveByDefault: false,
             Order: 1,
             CSS: 'fill: blue',
@@ -194,7 +246,7 @@
             ]
         }).addFilter({
             Id: 2,
-            DisplayName: "Test Filter 1",
+            DisplayAs: "Test Filter 1",
             ActiveByDefault: true,
             Order: 2,
             CSS: 'fill: red',

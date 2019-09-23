@@ -1,6 +1,6 @@
 export interface Filter {
     Id: string;
-    DisplayName: string;
+    DisplayAs: string;
     DataViewName: string;
     CSS: string;
     ActiveByDefault: boolean;

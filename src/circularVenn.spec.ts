@@ -106,6 +106,7 @@ describe('CircularVenn', () => {
                     Id: null,
                     Name: "Bucket 1 ∩ Bucket 2",
                     Order: null,
+                    dynamic: true,
                     data: [jasmine.objectContaining({
                         Id: 1,
                     }), jasmine.objectContaining({
@@ -141,6 +142,7 @@ describe('CircularVenn', () => {
                     Id: null,
                     Name: "Bucket 1 ∩ Bucket 2 ∩ Bucket 3",
                     Order: null,
+                    dynamic: true,
                     data: [jasmine.objectContaining({
                         Id: 1
                     })]

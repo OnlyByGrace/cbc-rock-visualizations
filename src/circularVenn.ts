@@ -1,30 +1,14 @@
-import * as d3 from 'd3';
-import { Bucket } from './bucket';
+//import * as d3 from 'd3';
+import { Bucket, BucketWrapper, DotWrapper } from './bucket';
 import { DotChart } from './dotChart';
-import { join } from 'path';
+import { style } from 'd3';
+
+declare var d3;
 
 export interface BucketIntersections {
     [intersectingBucketId: string]: Bucket;
 }
 
-export class BucketWrapper {
-    startingDegree: number;
-    endingDegree: number;
-    x: number;
-    y: number;
-    r: number;
-    overlapDegrees: number;
-    children: DotWrapper[];
-
-    data: Bucket;
-}
-
-export interface DotWrapper {
-    data: any;
-    x: number;
-    y: number;
-    r: number;
-}
 /**
  * IntertedVenn Chart
  * 

@@ -1,7 +1,10 @@
-import * as d3 from 'd3';
+//import * as d3 from 'd3';
 import { Filter } from './filter';
 import { Bucket } from './bucket';
-import { BucketWrapper } from './circularVenn';
+import { BucketWrapper } from './bucket';
+import { getStyles } from './styles.css';
+
+declare var d3;
 
 export abstract class DotChart {
     buckets: Bucket[] = [];
@@ -19,6 +22,7 @@ export abstract class DotChart {
 
     el: HTMLElement = null;
     summaryPane: HTMLElement = null;
+    toolbar: HTMLElement = null;
 
     promiseCount: number = 0;
 
@@ -56,21 +60,17 @@ export abstract class DotChart {
         this.summaryPane.className = "summary-pane";
         this.el.append(this.summaryPane);
 
-        // Add fulscreen and chart style buttons
+        // Add toolbar with fullscreen button
+        this.toolbar = document.createElement('div');
+        this.toolbar.className = "toolbar";
+
         let fullScreenButton = document.createElement('div');
-        fullScreenButton.className = "full-screen";
-        fullScreenButton.innerHTML = '<div><i class="fa fa-expand"></i></div>';
+        fullScreenButton.innerHTML = '<i class="fa fa-expand"></i>';
         fullScreenButton.onclick = this.goFullscreen.bind(this);
-
-        // let styleSelectorButtons = document.createElement('div');
-        // styleSelectorButtons.className = "style-selector";
-        // styleSelectorButtons.innerHTML = `
-        //     <div class="buckets"><i class="fa fa-chart-bar"></i></div>
-        //     <div class="circles"><i class="far fa-circle"></i></div>
-        // `;
-
-        this.el.append(fullScreenButton);
-        // this.el.append(styleSelectorButtons);
+        fullScreenButton.className = "button";
+        fullScreenButton.style.backgroundColor = "transparent";
+        this.toolbar.append(fullScreenButton);
+        this.el.append(this.toolbar);
 
         // Add chart SVG
         let newSVGEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -290,7 +290,7 @@ export abstract class DotChart {
             .attr('class', (d) => 'filter-' + d.Id)
 
         // Render the filter label in format "Filter Name (Count)"
-        filterGroupEl.append('text').text((d) => d.DisplayName + ' (' + d.count + ')')
+        filterGroupEl.append('text').text((d) => d.DisplayAs + ' (' + d.count + ')')
             .attr('x', () => that.preferences.dotRadius * 4)
             .attr('y', (d, i) => i * that.preferences.dotRadius * 3 + 2) // * 3 + 2 = diameter * 1.5 + 2
             .attr('class', 'filter-text');
@@ -322,186 +322,7 @@ export abstract class DotChart {
         let svgEl = <HTMLElement>this.svg.node();
         let styleTag = document.createElement('style');
 
-        styleTag.textContent = `
-            #${this.elementId} {
-                display: flex;
-                height: calc(100vh - 160px);
-                width: 100%;
-                flex-direction: column;
-            }
-
-            #${this.elementId} svg {
-                width: 100%;
-                -moz-user-select: none; /* Firefox */
-                -ms-user-select: none; /* Internet Explorer */
-               -khtml-user-select: none; /* KHTML browsers (e.g. Konqueror) */
-              -webkit-user-select: none; /* Chrome, Safari, and Opera */
-              -webkit-touch-callout: none; /* Disable Android and iOS callouts*/ }
-
-            #${this.elementId} circle {
-                fill: #c8c8c8;
-            }
-
-            #${this.elementId} .dot:not(.group) {
-                cursor: pointer;
-            }
-
-            #${this.elementId} svg .filter-text {
-                font-size: 1.2rem;
-                dominant-baseline: middle;
-            }
-    
-            #${this.elementId} svg .filter {
-                cursor: pointer;
-            }
-    
-            #${this.elementId} svg .filter.disabled {
-                opacity: .5;
-            }
-    
-            #${this.elementId} svg .visualization-title {
-                dominant-baseline: hanging;
-                text-anchor: middle;
-            }
-
-            #${this.elementId} .summary-pane {
-                background-color: white;
-                height: auto;
-                width: 400px;
-                top: 200px;
-                box-shadow: black 0px 0px 5px;
-                margin-left: 2.5%;
-                margin-top: 2.5%;
-                padding: 10px;
-                display: none;
-                position: fixed;
-            }
-
-            #${this.elementId} .lds-dual-ring {
-                margin-left: auto;
-                margin-right: auto;
-                display: block;
-                width: 64px;
-                height: 64px;
-              }
-
-              #${this.elementId} .lds-dual-ring:after {
-                content: " ";
-                display: block;
-                width: 46px;
-                height: 46px;
-                margin: 1px;
-                border-radius: 50%;
-                border: 5px solid #fff;
-                border-color: grey transparent grey transparent;
-                animation: lds-dual-ring 1.2s linear infinite;
-              }
-
-              @keyframes lds-dual-ring {
-                0% {
-                  transform: rotate(0deg);
-                }
-                100% {
-                  transform: rotate(360deg);
-                }
-              }
-
-              // Needed?
-              //
-              //
-              //
-        
-            text {
-                font-size: 1em;
-            }
-        
-            .bucket-label,
-            .visualization-title {
-                dominant-baseline: hanging;
-                text-anchor: middle;
-            }
-        
-            .filter, .bucket {
-                cursor: pointer;
-            }
-        
-            .filter.disabled {
-                opacity: .3;
-            }
-        
-            .filter-text {
-                dominant-baseline: middle;
-                font-size: 1em;
-            }
-        
-            circle {
-                /*stroke: white;*/
-                fill: #b1ceda;
-                /*opacity: 0.3;*/
-                stroke-width: 2px;
-            }
-        
-            .group {
-                fill: antiquewhite
-            }
-        
-            .diagram {
-                transform: translate(0px, 50px);
-            }
-        
-            foreignObject td:first-child {
-                text-align: left;
-            }
-        
-            foreignObject tr:not(:first-child) {
-                height: 2em;
-            }
-        
-            foreignObject tr:nth-child(2n+1) {
-                background-color: #efefef;
-            }
-        
-            .custom-css {
-                display: none;
-            }
-        
-            .labels text {
-                dominant-baseline: middle;
-                text-anchor: start;
-            }
-        
-            .enabledByDefault label {
-                float: left;
-                margin-left: 30px;
-                font-weight: 400;
-            }
-        
-            .bucket-line {
-                stroke-width: 3;
-                stroke: black;
-            }
-        
-            .style-selector, .full-screen {
-                align-self: flex-end;
-                border-radius: 10px;
-                background-color: white;
-                display: flex;
-                margin-right: 100px;
-            }
-        
-            .full-screen {
-                background-color: initial;
-            }
-        
-            .style-selector div, .full-screen div {
-                width: 40px;
-                height: 40px;
-                text-align: center;
-                cursor: pointer;
-                line-height: 40px;
-            }
-        
-        `;
+        styleTag.textContent = getStyles(this.elementId);
 
         styleTag.textContent += this.filters.map((filter) => {
             return `#${this.elementId} .filter-${filter.Id} { ${filter.CSS} }`;
@@ -529,7 +350,7 @@ export abstract class DotChart {
             });
         }
 
-        let buckets = this.svg.selectAll('g.bucket .base');
+        let buckets = this.svg.selectAll('.bucket .base');
 
         buckets.on('mouseover', (d: BucketWrapper) => {
             this.showPopupDialog({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.getBucketHTMLSummary(d));
@@ -664,7 +485,7 @@ export abstract class DotChart {
                         <td>${bucket.data.data.length}</td>
                     </tr>`;
         for (let filterCount of Object.keys(filterCounts)) {
-            displayString += `<tr><td style="font-weight: bold;">${this.filters[filterCount].DisplayName}:</td><td>${filterCounts[filterCount]} (${(filterCounts[filterCount] / (bucket.data.data.length || 1) * 100).toFixed(0)}%)</td></tr>`
+            displayString += `<tr><td style="font-weight: bold;">${this.filters[filterCount].DisplayAs}:</td><td>${filterCounts[filterCount]} (${(filterCounts[filterCount] / (bucket.data.data.length || 1) * 100).toFixed(0)}%)</td></tr>`
         }
         displayString += `</table>
             </div>
