@@ -27,25 +27,29 @@ export class ColumnCircleChart extends DotChart {
         let bucketsStyleButton = document.createElement('div');
         bucketsStyleButton.innerHTML = '<i class="fa fa-chart-bar"></i>';
         bucketsStyleButton.className = "button";
-        bucketsStyleButton.onclick = this.setBucketStyle.bind(this);
+        bucketsStyleButton.onclick = this.setStyleAndRender.bind(this, 'bucket');
 
         let circleStyleButton = document.createElement('div');
         circleStyleButton.innerHTML = '<i class="far fa-circle"></i>';
         circleStyleButton.className = 'button';
-        circleStyleButton.onclick = this.setCircleStyle.bind(this);
+        circleStyleButton.onclick = this.setStyleAndRender.bind(this, 'circle');
 
         styleSelector.append(bucketsStyleButton, circleStyleButton);
 
         this.toolbar.prepend(styleSelector);
     }
 
-    setBucketStyle() {
-        this.chartStyle = ChartStyle.Bucket;
-        this.render();
+    setStyle(newStyle: string) {
+        if (newStyle == 'bucket') {
+            this.chartStyle = ChartStyle.Bucket;
+        } else {
+            this.chartStyle = ChartStyle.Circle;  
+        }
+        return this;
     }
 
-    setCircleStyle() {
-        this.chartStyle = ChartStyle.Circle;  
+    setStyleAndRender(newStyle: string) {
+        this.setStyle(newStyle);
         this.render();
     }
 
