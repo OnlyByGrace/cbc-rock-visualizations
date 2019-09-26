@@ -1,7 +1,7 @@
 {
   "name": "dot-chart-visualizations",
   "version": "1.0.0",
-  "description": "Dot chart Visualizations for Rock RMS",
+  "description": "Dot chart visualizations for Rock RMS",
   "main": "src/dotChart.js",
   "dependencies": {
     "@types/d3": "^5.7.2",

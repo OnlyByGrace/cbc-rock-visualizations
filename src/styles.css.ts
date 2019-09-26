@@ -46,8 +46,10 @@ export function getStyles(elementId) {
 
             #${elementId} .summary-pane {
                 background-color: white;
+                max-height: 75vh;
+                overflow: scroll;
                 height: auto;
-                width: 400px;
+                width: auto;
                 top: 200px;
                 box-shadow: black 0px 0px 5px;
                 margin-left: 2.5%;
@@ -55,6 +57,7 @@ export function getStyles(elementId) {
                 padding: 10px;
                 display: none;
                 position: fixed;
+                z-index: 1000;
             }
 
             #${elementId} .lds-dual-ring {

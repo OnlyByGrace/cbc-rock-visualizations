@@ -1,4 +1,5 @@
 var webpack = require('webpack');
+var path = require('path');
 
 var config = {
   // devtool: 'inline-source-map',
@@ -6,6 +7,11 @@ var config = {
   entry: './src/index.ts',
   resolve: {
     extensions: ['.ts', '.js']
+  },
+  output: {
+    path: path.resolve('../scripts'),
+    filename: 'main.new.js',
+    publicPath: '/Scripts'
   },
   module: {
     rules: [
@@ -19,8 +25,7 @@ var config = {
         }
       }
     ]
-
-  },
+  }
 }
 
 module.exports = config;

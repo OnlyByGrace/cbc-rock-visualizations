@@ -3,6 +3,7 @@ import { Filter } from './filter';
 import { Bucket } from './bucket';
 import { BucketWrapper } from './bucket';
 import { getStyles } from './styles.css';
+import { Popup } from './popup';
 
 declare var d3;
 
@@ -21,9 +22,10 @@ export abstract class DotChart {
     entityUrl: string;
 
     el: HTMLElement = null;
-    summaryPane: HTMLElement = null;
     toolbar: HTMLElement = null;
+    summaryPane: Popup = null;
 
+    summaryPinned = false;
     promiseCount: number = 0;
 
     _showFilterKey: boolean = true;
@@ -56,9 +58,9 @@ export abstract class DotChart {
         }
 
         // Add Lava Summary dialog
-        this.summaryPane = document.createElement('div');
-        this.summaryPane.className = "summary-pane";
-        this.el.append(this.summaryPane);
+        this.summaryPane = new Popup();
+        this.summaryPane.el.addEventListener("OpenClicked", (e: CustomEvent) => this.openEntityUrl(e.detail));
+        this.el.append(this.summaryPane.el);
 
         // Add toolbar with fullscreen button
         this.toolbar = document.createElement('div');
@@ -177,43 +179,6 @@ export abstract class DotChart {
         return this;
     }
 
-    showPopupDialog(mousePosition: { x: number, y: number }, content: Promise<string> | string) {
-        let width = window.innerWidth;
-        let popupX = 0;
-
-        if (mousePosition.x > (width / 2)) {
-            popupX = width / 4 - 200;
-        } else {
-            popupX = width / 4 * 3 - 200;
-        }
-
-        this.summaryPane.style.display = 'initial';
-        this.summaryPane.style.left = popupX + "px";
-
-        if (typeof content === 'string') {
-            this.summaryPane.innerHTML = content;
-            this.promiseCount = 0;
-        } else if (content && typeof content.then === 'function') {
-            // Show loader
-            this.summaryPane.innerHTML = '<div class="lds-dual-ring"></div>';
-            this.promiseCount++;
-            const promiseCountAtTimeOfDispatch = this.promiseCount;
-            content.then((value) => {
-                // If this is not true, it's because there's a new promise in the works
-                if (this.promiseCount == promiseCountAtTimeOfDispatch) {
-                    this.summaryPane.innerHTML = value;
-                    this.promiseCount = 0;
-                }
-            });
-        } else {
-            throw "Not a string or promise";
-        }
-    }
-
-    hidePopupDialog() {
-        this.summaryPane.style.display = 'none';
-    }
-
     fetchLavaData(entityId: number): Promise<string> {
         let filtersForLava = '';
         let entityFilters = this.filtersForEntity[entityId]
@@ -221,11 +186,11 @@ export abstract class DotChart {
             filtersForLava = `
                 {% capture jsonString %}
                     ${JSON.stringify(entityFilters.map((filter) => {
-                        let filterPrototype: Filter = <any>{};
-                        Object.assign(filterPrototype, this.filters.find((filterProto) => filterProto.Id == filter));
-                        delete filterPrototype.data;
-                        return filterPrototype;
-                    }))}
+                let filterPrototype: Filter = <any>{};
+                Object.assign(filterPrototype, this.filters.find((filterProto) => filterProto.Id == filter));
+                delete filterPrototype.data;
+                return filterPrototype;
+            }))}
                 {% endcapture %}
                 {% assign Filters = jsonString | FromJSON %}
              `;
@@ -336,35 +301,49 @@ export abstract class DotChart {
 
         if (this.lavaTemplate) {
             dots.on('mouseover', (d: any) => {
-                this.showPopupDialog({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.fetchLavaData(d.data.Id));
+                this.summaryPane.show({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.fetchLavaData(d.data.Id), d.data);
             });
 
             dots.on('mouseout', (d, i) => {
-                this.hidePopupDialog();
+                this.summaryPane.hide();
             })
+
+            dots.on('click', (d: any) => {
+                this.summaryPane.unpin();
+                this.summaryPane.show({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.fetchLavaData(d.data.Id), d.data);
+                this.summaryPane.pin();
+            });
         }
 
         if (this.entityUrl) {
-            dots.on('click', (d: any) => {
-                window.open(this.entityUrl.replace("{{Id}}", d.data.Id.toString()), "_blank");
+            dots.on('dblclick', (d: any) => {
+                this.openEntityUrl(d.data);
             });
         }
 
         let buckets = this.svg.selectAll('.bucket .base');
 
         buckets.on('mouseover', (d: BucketWrapper) => {
-            this.showPopupDialog({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.getBucketHTMLSummary(d));
+            this.summaryPane.show({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.getBucketHTMLSummary(d));
         });
 
         buckets.on('mouseout', () => {
-            this.hidePopupDialog();
+            this.summaryPane.hide();
         });
 
         if (this.bucketUrl) {
             buckets.on('click', (d: any) => {
-                if (d.data.Id) window.open(this.bucketUrl.replace("{{Id}}", d.data.Id.toString()), "_blank");
+                this.openBucketUrl(d.data);
             });
         }
+    }
+
+    openEntityUrl(entity) {
+        window.open(this.entityUrl.replace("{{Id}}", entity.Id.toString()), "_blank");
+    }
+
+    openBucketUrl(bucket) {
+        window.open(this.bucketUrl.replace("{{Id}}", bucket.Id.toString()), "_blank");
     }
 
     /**
