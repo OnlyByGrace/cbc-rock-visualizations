@@ -39,6 +39,7 @@ export class CircularVenn extends DotChart {
                 Color: this.buckets[0].Color,
                 Order: null,
                 Name: this.buckets[0].Name,
+                DisplayAs: this.buckets[0].DisplayAs,
                 data: this.buckets[0].data
             }
             this.buckets = [];
@@ -202,7 +203,7 @@ export class CircularVenn extends DotChart {
 
     renderCenterCircle() {
         var baseContainingCircle = {
-            "name": this.centerBucket.Name,
+            "name": this.centerBucket.DisplayAs || this.centerBucket.Name,
             "padding": 2,
             "children": [
                 ...this.centerBucket.data
@@ -276,7 +277,7 @@ export class CircularVenn extends DotChart {
 
         let bucketKeyItemGroup = bucketKeyGroupEnter.append('g');
         bucketKeyItemGroup.append('rect').attr('width', '20').attr('height', '20').attr('fill', (d) => d.Color);
-        bucketKeyItemGroup.append('text').text((d) => d.Name);
+        bucketKeyItemGroup.append('text').text((d) => d.DisplayAs || d.Name);
 
         // Calculate positions of each key item so that they're centered on the screen
         bucketKeyGroup.selectAll('g').each(function () { totalWidth += (<SVGGraphicsElement>d3.select(this).node()).getBBox().width + 50; })
@@ -295,6 +296,8 @@ export class CircularVenn extends DotChart {
         if (!this.buckets || !this.buckets.length) {
             throw "No buckets defined";
         }
+
+        super.prerender();
 
         this.calculateBucketIntersections();
         this.renderCenterCircle();

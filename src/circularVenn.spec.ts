@@ -266,10 +266,19 @@ describe('CircularVenn', () => {
             spyOn(dotChart, 'calculateBucketIntersections').and.returnValue(null);
             spyOn(dotChart, 'renderBuckets').and.returnValue(null);
             spyOn(dotChart, 'renderBucketKey').and.returnValue(null);
+            spyOn(DotChart.prototype, 'prerender').and.returnValue(null);
         })
 
         afterEach(() => {
             // document.removeChild(dotChart.el);
+        });
+
+        it('should call super prerender', () => {
+            dotChart.addBucket(sampleBucket);
+
+            dotChart.render();
+
+            expect(DotChart.prototype.prerender).toHaveBeenCalled();
         });
 
         it('should require at least one bucket', () => {

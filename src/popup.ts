@@ -43,31 +43,51 @@ export class Popup {
         this.el.append(this.body);
     }
 
-    show(mousePosition: { x: number, y: number }, content: Promise<string> | string, entity: any = null) {
-        if (this.pinned) {
-            return false;
-        }
-
-        this.entity = entity;
-
-        let width = window.innerWidth;
+    calculatePosition(mousePosition: { x: number, y: number }) {
         let popupX = 0;
+        let popupY = 0;
 
-        if (mousePosition.x > (width / 2)) {
-            popupX = width / 4 - 200;
+        let currentBox = this.el.getBoundingClientRect();
+
+        if ( currentBox.width > (window.innerWidth / 2) ) {
+            popupX = 0;
         } else {
-            popupX = width / 4 * 3 - 200;
+            if (mousePosition.x > (window.innerWidth / 2)) {
+                popupX = window.innerWidth / 4 - (currentBox.width / 2);
+            } else {
+                popupX = window.innerWidth / 4 * 3 - (currentBox.width / 2);
+            }
         }
 
-        this.el.style.display = 'initial';
+        if (currentBox.height > window.innerHeight) {
+            popupY = 0;
+        } else {
+            popupY = (window.innerHeight / 2) - (currentBox.height / 2);
+        }
+
         this.el.style.left = popupX + "px";
+        // this.el.style.top = popupY + "px";
+    }
+
+    preview(mousePosition: { x: number, y: number }, content: Promise<string> | string, entity: any = null) {
+        if (!this.pinned) {
+            this.show(mousePosition, content, entity);
+        }
+    }
+
+    show(mousePosition: { x: number, y: number }, content: Promise<string> | string, entity: any = null) {
+        this.entity = entity;
+        this.el.style.display = 'initial';
 
         if (typeof content === 'string') {
             this.body.innerHTML = content;
             this.promiseCount = 0;
+            this.calculatePosition(mousePosition);
         } else if (content && typeof content.then === 'function') {
             // Show loader
             this.body.innerHTML = '<div class="lds-dual-ring"></div>';
+            this.calculatePosition(mousePosition);
+
             this.promiseCount++;
             const promiseCountAtTimeOfDispatch = this.promiseCount;
             content.then((value) => {
@@ -77,11 +97,8 @@ export class Popup {
                 if (this.promiseCount == promiseCountAtTimeOfDispatch) {
                     this.body.innerHTML = value;
                     this.promiseCount = 0;
-                }
-            }, fail => {
-                if (this.promiseCount == promiseCountAtTimeOfDispatch) {
-                    this.body.innerHTML = fail;
-                    this.promiseCount = 0;
+
+                    this.calculatePosition(mousePosition);
                 }
             });
         } else {

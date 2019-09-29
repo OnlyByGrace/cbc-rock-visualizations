@@ -69,12 +69,12 @@ export class ColumnCircleChart extends DotChart {
         // Setup pack layout
         let svgEl: SVGGraphicsElement = <SVGGraphicsElement>this.svg.node();
         svgEl.style.width = "100%";
-        svgEl.style.height = "100vh";
         let packLayout = d3.pack();
         packLayout.size([svgEl.getBoundingClientRect().width, svgEl.getBoundingClientRect().height])
             .padding((d) => {
                 return d.data.padding;
             });
+        packLayout.radius(() => 10);
         var root = d3.hierarchy(baseContainingCircle).sum(function (d) { return 5; });
         packLayout(root);
 
@@ -106,7 +106,7 @@ export class ColumnCircleChart extends DotChart {
 
             bucket.append('g')
                 .selectAll("circle")
-                .data(d.children)
+                .data(d.children || [])
                 .join("circle")
                 .attr('class', function (d: BucketWrapper) {
                     return that.attachFilters.call(that, this, d)
@@ -126,6 +126,8 @@ export class ColumnCircleChart extends DotChart {
             .data(root.children)
             .join("text")
             .attr('class','bucket')
+            .style('dominant-baseline','middle')
+            .style('text-anchor','start')
             .attr('dy', '-10')
             .style("fill-opacity", (d: BucketWrapper) => d.parent === root ? 1 : 0)
             .style("display", (d: BucketWrapper) => d.parent === root ? "inline" : "none")
@@ -135,7 +137,7 @@ export class ColumnCircleChart extends DotChart {
             .attr('class','base')
             .attr('xlink:href', (d: BucketWrapper) => `#group-${d.data.Id}`)
             .text((d: BucketWrapper) => {
-                return d.data.Name + ' (' + (<any>d.data).children.length + ')'
+                return d.data.DisplayAs || d.data.Name + ' (' + (<any>d.data).children.length + ')'
             });
 
         // Move parent text to be centered on circle
@@ -149,7 +151,9 @@ export class ColumnCircleChart extends DotChart {
                 return d3.select(this).node().parentElement.getComputedTextLength()
             })
 
-        this.xcenter = svgEl.getBBox().x + (svgEl.getBBox().width / 2);
+        setTimeout(() => {
+            this.xcenter = svgEl.getBBox().x + (svgEl.getBBox().width / 2);
+        }, 0);
     }
 
     renderBucketChart() {
@@ -157,6 +161,7 @@ export class ColumnCircleChart extends DotChart {
 
         let scaleTop = 0;
         let svgEl: SVGGraphicsElement = <SVGGraphicsElement>this.svg.node();
+        svgEl.style.width = "100%";
 
         let calculatePositions = (buckets: Bucket[]): BucketWrapper[] => {
             let bucketWrappers: BucketWrapper[] = [];
@@ -225,7 +230,7 @@ export class ColumnCircleChart extends DotChart {
 
         let base = svgBucketsEnter.append('g').attr('class', 'base');
         base.append('text').text(function (d) {
-            return d.data.Name + ' (' + d.children.length + ')';
+            return d.data.DisplayAs || d.data.Name + ' (' + d.children.length + ')';
         }).attr('x', bucketWidth / 2)
             .attr('text-anchor', 'middle')
             .attr('class', 'bucket-label')
@@ -263,12 +268,16 @@ export class ColumnCircleChart extends DotChart {
 
         const margins = 100;
 
+        super.prerender();
+
         if (this.chartStyle == ChartStyle.Bucket) {
             this.renderBucketChart();
         } else {
             this.renderCircleChart();
         }
 
-        super.render();
+        setTimeout(() => {
+            super.render();
+        }, 10);
     }
 }

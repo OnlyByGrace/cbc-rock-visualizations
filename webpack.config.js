@@ -10,7 +10,7 @@ var config = {
   },
   output: {
     path: path.resolve('../scripts'),
-    filename: 'main.new.js',
+    filename: 'main.js',
     publicPath: '/Scripts'
   },
   module: {

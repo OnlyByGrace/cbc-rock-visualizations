@@ -17,7 +17,6 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-      './node_modules/d3/index.js',
       { pattern: 'src/**/*.spec.ts', included: true }
     ],
 
@@ -27,7 +26,7 @@ module.exports = function(config) {
     ],
 
     webpack: {
-      devtool: 'inline-source-map',
+      //devtool: 'inline-source-map',
       resolve: webpack.resolve,
       module: webpack.module,
       mode: 'development'

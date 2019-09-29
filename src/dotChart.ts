@@ -4,6 +4,7 @@ import { Bucket } from './bucket';
 import { BucketWrapper } from './bucket';
 import { getStyles } from './styles.css';
 import { Popup } from './popup';
+import { style } from 'd3';
 
 declare var d3;
 
@@ -23,6 +24,7 @@ export abstract class DotChart {
 
     el: HTMLElement = null;
     toolbar: HTMLElement = null;
+    styleEl: HTMLStyleElement = null;
     summaryPane: Popup = null;
 
     summaryPinned = false;
@@ -74,10 +76,14 @@ export abstract class DotChart {
         this.toolbar.append(fullScreenButton);
         this.el.append(this.toolbar);
 
+        // Add style el
+        this.styleEl = document.createElement('style');
+
         // Add chart SVG
         let newSVGEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         newSVGEl.id = this.elementId.toString() + "-svg";
         this.el.append(newSVGEl);
+        this.el.insertBefore(this.styleEl, newSVGEl);
         this.svg = d3.select(newSVGEl);
         this.title = title;
 
@@ -284,16 +290,11 @@ export abstract class DotChart {
     renderStyles() {
         if (!this.elementId) return;
 
-        let svgEl = <HTMLElement>this.svg.node();
-        let styleTag = document.createElement('style');
+        this.styleEl.textContent = getStyles(this.elementId);
 
-        styleTag.textContent = getStyles(this.elementId);
-
-        styleTag.textContent += this.filters.map((filter) => {
+        this.styleEl.textContent += this.filters.map((filter) => {
             return `#${this.elementId} .filter-${filter.Id} { ${filter.CSS} }`;
         }).join(" ");
-
-        svgEl.parentNode.insertBefore(styleTag, svgEl);
     }
 
     attachEventHandlers() {
@@ -301,7 +302,7 @@ export abstract class DotChart {
 
         if (this.lavaTemplate) {
             dots.on('mouseover', (d: any) => {
-                this.summaryPane.show({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.fetchLavaData(d.data.Id), d.data);
+                this.summaryPane.preview({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.fetchLavaData(d.data.Id), d.data);
             });
 
             dots.on('mouseout', (d, i) => {
@@ -309,9 +310,9 @@ export abstract class DotChart {
             })
 
             dots.on('click', (d: any) => {
-                this.summaryPane.unpin();
-                this.summaryPane.show({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.fetchLavaData(d.data.Id), d.data);
                 this.summaryPane.pin();
+                if (this.summaryPane.entity != d.data)
+                    this.summaryPane.show({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.fetchLavaData(d.data.Id), d.data);
             });
         }
 
@@ -324,7 +325,7 @@ export abstract class DotChart {
         let buckets = this.svg.selectAll('.bucket .base');
 
         buckets.on('mouseover', (d: BucketWrapper) => {
-            this.summaryPane.show({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.getBucketHTMLSummary(d));
+            this.summaryPane.preview({ x: (<MouseEvent>event).clientX, y: (<MouseEvent>event).clientY }, this.getBucketHTMLSummary(d));
         });
 
         buckets.on('mouseout', () => {
@@ -343,7 +344,14 @@ export abstract class DotChart {
     }
 
     openBucketUrl(bucket) {
+        // Dynamic buckets won't have an Id
+        if (bucket.Id)
         window.open(this.bucketUrl.replace("{{Id}}", bucket.Id.toString()), "_blank");
+    }
+
+    prerender() {
+        this.elementsForFilter = {};
+        this.el.style.height = null;
     }
 
     /**
@@ -353,8 +361,6 @@ export abstract class DotChart {
      * function to scale the chart and draw the filter key
      */
     render() {
-        console.log(this.filters);
-
         this.renderStyles();
 
         // Scale to fit
@@ -366,7 +372,7 @@ export abstract class DotChart {
         let newLeft = rect.x - 50;
         let newRight = rect.x + rect.width + 50;
 
-        // We want the center of the diagram always in the center of the sreen
+        // We want the center of the diagram always in the center of the screen
         // So the width of the diagram is not it's width; it is the farthest point from the center point * 2
         // xcenter is like CSS transform-origin point. We always want xcenter to be centered on the screen
         let diagramWidth;
@@ -378,16 +384,16 @@ export abstract class DotChart {
             diagramWidth = rightOffsetFromCenter;
         }
 
-        let minHeight = (<HTMLElement>this.svg.node()).getBoundingClientRect().height;
+        let minHeight = this.el.getBoundingClientRect().height - 40;
 
-        let minWidth = (<HTMLElement>this.svg.node()).getBoundingClientRect().width / 2;
+        let minWidth = this.el.getBoundingClientRect().width / 2;
         diagramWidth = Math.max(diagramWidth, minWidth);
 
         if (newBottom - newTop < minHeight) {
-            (<HTMLElement>this.svg.node()).style.height = newBottom - newTop + "px";
+            this.el.style.height = newBottom - newTop + "px";
         }
 
-        this.svg.attr('viewBox', `${this.xcenter - diagramWidth} ${newTop} ${(diagramWidth * 2)} ${newBottom + Math.abs(newTop)}`)
+        this.svg.attr('viewBox', `${this.xcenter - diagramWidth} ${newTop} ${(diagramWidth * 2)} ${Math.abs(newBottom - newTop)}`)
 
         if (this.filters.length && this._showFilterKey) {
             this.renderFilterKey(diagramWidth == Infinity ? 0 : this.xcenter - diagramWidth + 100, newTop);

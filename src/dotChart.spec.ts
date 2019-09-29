@@ -2,7 +2,7 @@ import { Bucket } from './bucket';
 import { DotChart } from './dotChart';
 import { Filter } from './filter';
 
-window.d3 = require('d3');
+window['d3'] = require('d3');
 
 class MyDotChart extends DotChart {
     constructor(svgId?: string, title: string = "") {
@@ -86,6 +86,12 @@ describe("DotChart", function () {
         expect(document.querySelectorAll('svg').length).toBe(1);
         expect(dotChart.svg).toBeTruthy();
         document.body.append(container);
+    });
+
+    it('should add a stylesheet to the document', () => {
+        let dotChart = new MyDotChart();
+
+        expect(document.getElementsByTagName('style').length).toBe(1);
     });
 
     // it('should toggle filters when you click on the key', () => {
@@ -294,14 +300,6 @@ describe("DotChart", function () {
             // Expect viewbox to be beyond the dots with padding
         });
 
-        it('should add scoped CSS to the document', () => {
-            let dotChart = new MyDotChart();
-
-            expect(document.getElementsByTagName('style').length).toBe(0);
-            dotChart.render();
-            expect(document.getElementsByTagName('style').length).toBe(1);
-        });
-
         it('should attach event handlers', () => {
             let dotChart = new MyDotChart("mychart");
 
@@ -396,121 +394,6 @@ describe("DotChart", function () {
             expect(document.querySelector('style').textContent).toContain(".filter-1 { fill: green }");
         });
     });
-
-    describe('showPopupDialog', () => {
-        it('should show the dialog', () => {
-            let dotChart = new MyDotChart();
-
-            dotChart.showPopupDialog({ x: 0, y: 0 }, "test");
-
-            let summaryPane: HTMLElement = dotChart.el.querySelector('.summary-pane');
-
-            expect(summaryPane.style.display).toBe('initial');
-        });
-
-        it('should show the dialog on the opposite side of the screen from the mouse', () => {
-            let dotChart = new MyDotChart();
-
-            dotChart.showPopupDialog({ x: 0, y: 0 }, "test");
-
-            let summaryPane: HTMLElement = dotChart.el.querySelector('.summary-pane');
-
-            expect(summaryPane.style.left.slice(0, -2)).toBeGreaterThan(window.innerWidth / 2);
-
-            dotChart.showPopupDialog({ x: window.innerWidth, y: 0 }, "test");
-
-            expect(summaryPane.style.left.slice(0, -2)).toBeLessThan(window.innerWidth / 2);
-        });
-
-        it('should accept either text or a Promise', (done) => {
-            let dotChart = new MyDotChart();
-
-            dotChart.showPopupDialog({ x: 0, y: 0 }, "test");
-
-            let summaryPane: HTMLElement = dotChart.el.querySelector('.summary-pane');
-
-            expect(summaryPane.textContent).toBe('test');
-
-            expect(() => { dotChart.showPopupDialog({ x: 0, y: 0 }, <any>1) }).toThrow();
-
-            dotChart.showPopupDialog({ x: 0, y: 0 }, new Promise((resolve, reject) => {
-                resolve("test promise");
-            }));
-
-            setTimeout(() => {
-                expect(summaryPane.textContent).toBe('test promise');
-                done();
-            }, 0);
-        });
-
-        it('should show a loader if a promise is passed', (done) => {
-            let dotChart = new MyDotChart();
-
-            let summaryPane: HTMLElement = dotChart.el.querySelector('.summary-pane');
-
-            dotChart.showPopupDialog({ x: 0, y: 0 }, new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    resolve("test promise");
-                }, 10);
-            }));
-
-            expect(summaryPane.querySelector('.lds-dual-ring')).toBeTruthy();
-
-            setTimeout(() => {
-                expect(summaryPane.textContent).toBe('test promise');
-                expect(summaryPane.querySelector('.lds-dual-ring')).toBeFalsy();
-                done();
-            }, 11);
-        });
-
-        it('should only show the latest promise, even if returned in a different order', (done) => {
-            let dotChart = new MyDotChart();
-
-            let summaryPane: HTMLElement = dotChart.el.querySelector('.summary-pane');
-
-            dotChart.showPopupDialog({ x: 0, y: 0 }, new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    resolve("test promise 1");
-                }, 10);
-            }));
-
-            dotChart.showPopupDialog({ x: 0, y: 0 }, new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    resolve("test promise 3");
-                }, 2);
-            }));
-
-            dotChart.showPopupDialog({ x: 0, y: 0 }, new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    resolve("test promise 2");
-                }, 1);
-            }));
-
-            setTimeout(() => {
-                expect(summaryPane.textContent).toBe('test promise 2');
-                done();
-            }, 16);
-        })
-
-        it('should not show promises after text', (done) => {
-            let dotChart = new MyDotChart();
-
-            let summaryPane: HTMLElement = dotChart.el.querySelector('.summary-pane');
-
-            dotChart.showPopupDialog({ x: 0, y: 0 }, new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    resolve("test promise 1");
-                }, 2);
-            }));
-
-            dotChart.showPopupDialog({ x: 0, y: 0 }, "Not a promise");
-
-            setTimeout(() => {
-                expect(summaryPane.textContent).toBe("Not a promise");
-                done();
-            }, 5);
-        })
-    })
 
     describe('fetchLavaData', () => {
         beforeEach(() => {

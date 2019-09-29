@@ -23,6 +23,7 @@ export interface DotWrapper {
 export class Bucket {
     Id: number;
     Name: string;
+    DisplayAs?: string;
     Order: number;
     Color: string;
     data: Array<any>;
