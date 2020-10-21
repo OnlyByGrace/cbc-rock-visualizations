@@ -1,2 +1,5 @@
 node_modules
 dist
+.vs/slnx.sqlite
+.vs/VSWorkspaceState.json
+.vs/d3 Visualizations/v15/.suo
